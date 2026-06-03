@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Activity, Lock, Mail, Shield, ArrowRight, Fingerprint, Users } from "lucide-react";
+import { Activity, Lock, Mail, Shield, ArrowRight, Fingerprint } from "lucide-react";
 import { RedActivaUser } from "../types";
 import { loginUser } from "../utils/api";
 
@@ -45,18 +45,6 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     }
   };
 
-  const handleCivilianBypass = () => {
-    const guestUser: RedActivaUser = {
-      id: "guest-civil",
-      email: "publico@redactiva.org",
-      fullName: "Ciudadano / Red de Familia",
-      role: "Ciudadano",
-      entity: "Portal de Colaboración Civil",
-      avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=face"
-    };
-    onLoginSuccess(guestUser);
-  };
-
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden font-sans">
       
@@ -79,11 +67,6 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           <h2 className="mt-4 text-center text-3xl font-extrabold tracking-tight text-slate-900 font-sans">
             Red<span className="text-[#991b1b] font-medium">Activa</span>
           </h2>
-          <div className="mt-1.5 flex items-center justify-center gap-2">
-            <span className="bg-red-50 text-[#991b1b] border border-red-200/60 text-[10px] uppercase tracking-widest font-bold font-mono px-2.5 py-0.5 rounded-md">
-              SISTEMA FEDERAL DE RECONOCIMIENTO
-            </span>
-          </div>
         </div>
       </div>
 
@@ -97,7 +80,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+          <div className="gap-8">
             
             {/* Left side: Credentials authentication Form */}
             <div className="md:col-span-6 space-y-6">
@@ -160,70 +143,6 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                 </button>
               </form>
             </div>
-
-            {/* Right side: Quick and Civilian Gateways */}
-            <div className="md:col-span-6 flex flex-col justify-between border-t md:border-t-0 md:border-l border-slate-100 pt-6 md:pt-0 md:pl-8 space-y-6">
-              <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-950 flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-[#991b1b]" />
-                  Acceso Rápido Demo (Evaluación)
-                </h3>
-                <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">Haga click en cualquiera de las firmas autorizadas para emular su perfil con todas sus competencias oficiales en la federación.</p>
-              </div>
-
-              {/* Grid of quick logins */}
-              <div className="grid grid-cols-1 gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin("eaaf@redactiva.gob.ar", "eaaf")}
-                  className="group flex items-center gap-3 p-2 bg-slate-50/60 hover:bg-red-50/30 border border-slate-200 hover:border-[#991b1b]/50 text-left rounded-xl transition cursor-pointer"
-                >
-                  <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=50&h=50&fit=crop&crop=face" alt="Pellegrini" className="h-8 w-8 rounded-lg object-cover grayscale group-hover:grayscale-0 transition" referrerPolicy="no-referrer" />
-                  <div>
-                    <p className="text-[11px] font-bold text-slate-900 leading-tight group-hover:text-[#991b1b] transition">Clara Pellegrini</p>
-                    <p className="text-[9px] text-[#991b1b] font-mono font-bold mt-0.5">FORENSE (EAAF)</p>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin("clinicas@redactiva.gob.ar", "clinicas")}
-                  className="group flex items-center gap-3 p-2 bg-slate-50/60 hover:bg-red-50/30 border border-slate-200 hover:border-[#991b1b]/50 text-left rounded-xl transition cursor-pointer"
-                >
-                  <img src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=50&h=50&fit=crop&crop=face" alt="Falco" className="h-8 w-8 rounded-lg object-cover grayscale group-hover:grayscale-0 transition" referrerPolicy="no-referrer" />
-                  <div>
-                    <p className="text-[11px] font-bold text-slate-900 leading-tight group-hover:text-[#991b1b] transition">Dra. Ana Falco</p>
-                    <p className="text-[9px] text-[#991b1b] font-mono font-bold mt-0.5">MÉDICO DE EMERGENCIA</p>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin("policia@redactiva.gob.ar", "policia")}
-                  className="group flex items-center gap-3 p-2 bg-slate-50/60 hover:bg-red-50/30 border border-slate-200 hover:border-[#991b1b]/50 text-left rounded-xl transition cursor-pointer"
-                >
-                  <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?w=50&h=50&fit=crop&crop=face" alt="Cardozo" className="h-8 w-8 rounded-lg object-cover grayscale group-hover:grayscale-0 transition" referrerPolicy="no-referrer" />
-                  <div>
-                    <p className="text-[11px] font-bold text-slate-900 leading-tight group-hover:text-[#991b1b] transition">Héctor Cardozo</p>
-                    <p className="text-[9px] text-[#991b1b] font-mono font-bold mt-0.5">SEGURIDAD (PFA)</p>
-                  </div>
-                </button>
-              </div>
-
-              {/* Civilian Bypass footer */}
-              <div className="pt-4 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={handleCivilianBypass}
-                  className="w-full py-2.5 bg-slate-50 hover:bg-red-50 hover:text-[#991b1b] border border-slate-200 text-slate-700 text-xs font-extrabold rounded-xl flex items-center justify-center gap-2 transition cursor-pointer"
-                >
-                  <Users className="h-3.5 w-3.5 text-slate-500 group-hover:text-[#991b1b]" />
-                  <span>Entrar como Ciudadano (Lectura Pública)</span>
-                </button>
-              </div>
-
-            </div>
-
           </div>
 
         </div>

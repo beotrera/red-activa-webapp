@@ -1,8 +1,22 @@
+export enum UserRole {
+  DOCTOR = 'DOCTOR',
+  NURSE = 'NURSE',
+  ADMINISTRATOR = 'ADMINISTRATOR',
+  SOCIAL_WORKER = 'SOCIAL_WORKER',
+  PSYCHOLOGIST = 'PSYCHOLOGIST',
+}
+
+export enum Gender {
+  MALE = 'MALE',
+  FEMALE = 'FEMALE',
+}
+
 export interface RedActivaUser {
   id: string;
   email: string;
   fullName: string;
-  role: 'Forense' | 'Médico' | 'Seguridad' | 'Judicial' | 'Ciudadano';
+  role: UserRole;
+  gender?: Gender;
   entity: string;
   avatarUrl?: string;
   token?: string;
@@ -25,24 +39,42 @@ export interface MissingPerson {
   notes?: string;
 }
 
+export enum NNGender {
+  MALE = 'MALE',
+  FEMALE = 'FEMALE',
+}
+
+export enum ConsciousnessLevel {
+  CONSCIOUS = 'CONSCIOUS',
+  DISORIENTED = 'DISORIENTED',
+  UNCONSCIOUS = 'UNCONSCIOUS',
+  SEDATED = 'SEDATED',
+}
+
+export enum NNStatus {
+  UNIDENTIFIED = 'UNIDENTIFIED',
+  POTENTIAL_MATCH = 'POTENTIAL_MATCH',
+  IDENTIFIED = 'IDENTIFIED',
+}
+
 export interface IdentifyingPhoto {
   url: string;
-  description: string;
+  uploadedAt: string;
 }
 
 export interface NNAdmission {
   id: string;
   estimatedAge: number;
-  gender: 'Masculino' | 'Femenino' | 'Otro' | 'Desconocido';
+  gender: NNGender;
   height: string;
   weight: string;
-  distinctiveFeatures: string; // Physical features found, scars, tattoos, clothing
-  consciousnessLevel: 'Consciente' | 'Desorientado' | 'Inconsciente' | 'Sedado';
-  location: string; // Hospital name or police station, e.g. "Hospital Central - Guardia"
-  dateOfAdmission: string; // YYYY-MM-DD HH:mm
-  status: 'Unidentified' | 'Potential Match' | 'Identified';
-  reportedBy: string; // "Hospital General Pozos", "Morgue Judicial", etc.
-  assignedTo?: string; // Designated agency, e.g. "EAAF", "Policía Federal", etc.
+  distinctiveFeatures: string;
+  consciousnessLevel: ConsciousnessLevel;
+  location: string;
+  dateOfAdmission: string;
+  status: NNStatus;
+  reportedBy: string;
+  assignedTo?: string;
   notes?: string;
   identifyingPhotos?: IdentifyingPhoto[];
 }

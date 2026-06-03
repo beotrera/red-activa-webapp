@@ -10,14 +10,13 @@ import {
   Phone, 
   CheckCircle, 
   XCircle, 
-  Sparkles, 
   Users, 
   Hospital, 
   Hourglass,
   Clock,
   ExternalLink
 } from "lucide-react";
-import { MissingPerson, NNAdmission, MatchResult } from "../types";
+import { MissingPerson, NNAdmission, MatchResult, NNStatus } from "../types";
 
 interface DashboardProps {
   missingPersons: MissingPerson[];
@@ -45,7 +44,7 @@ export default function Dashboard({
 
   // Counter stats
   const activeSearching = missingPersons.filter(mp => mp.status === "Searching").length;
-  const activeNN = nnAdmissions.filter(nn => nn.status !== "Identified").length;
+  const activeNN = nnAdmissions.filter(nn => nn.status !== NNStatus.IDENTIFIED).length;
   const totalMatchesNum = pendingMatches.length;
   const resolvedCasesCount = missingPersons.filter(mp => mp.status === "Resolved" || mp.status === "Found").length;
 
@@ -134,11 +133,8 @@ export default function Dashboard({
         {/* Panel Header */}
         <div className="bg-slate-900 px-6 py-4.5 flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b border-slate-950 text-white">
           <div className="flex items-center gap-2">
-            <div className="bg-slate-800 p-1.5 rounded-lg border border-slate-700 text-white animate-pulse">
-              <Sparkles className="h-4.5 w-4.5" />
-            </div>
             <div>
-              <h2 className="text-sm font-bold uppercase tracking-wider">Motor de Cruce Neuronal Inteligente</h2>
+              <h2 className="text-sm font-bold uppercase tracking-wider">Cruce de Coincidencias</h2>
               <p className="text-xs text-slate-400">Monitoreo automático de ingresos clínicos y policiales en tiempo real</p>
             </div>
           </div>
@@ -304,8 +300,7 @@ export default function Dashboard({
                     {/* AI Reasons / Why did it match? */}
                     <div className="bg-gray-50 p-4 border-t border-gray-200">
                       <div className="flex items-center gap-2 mb-2 text-xs font-bold text-gray-700">
-                        <Sparkles className="h-4 w-4 text-amber-500" />
-                        <span>¿POR QUÉ COINCIDEN? (Análisis Morfológico-Semántico):</span>
+                        <span>¿POR QUÉ COINCIDEN?</span>
                       </div>
                       <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1.5 text-xs text-gray-600 pl-4 list-disc">
                         {match.reasons.map((reason, i) => (

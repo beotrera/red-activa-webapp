@@ -1,14 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
+import { MissingPerson, NNAdmission, MatchResult, SystemAlert, NNGender, ConsciousnessLevel, NNStatus } from "./types";
+import { useAppDispatch, useAppSelector } from "./hooks/useAppDispatch";
+import { loginSuccess, logout } from "./store/authSlice";
 import {
-  fetchDashboardData,
-  createMissingPerson,
-  createNNAdmission,
-  validateMatch,
-  markAlertsAsRead,
-} from "./utils/api";
-import { MissingPerson, NNAdmission, MatchResult, SystemAlert, RedActivaUser } from "./types";
+  usePersons,
+  useCreateNNAdmission,
+  useCreateMissingPerson,
+  useValidateMatch,
+  useMarkAlertRead,
+} from "./hooks/useApi";
 import Header from "./components/Header";
-import MissingPersonReport from "./components/MissingPersonReport";
 import Login from "./components/Login";
 import {
   Activity,
@@ -17,7 +18,6 @@ import {
   Scale,
   PlusCircle,
   Search,
-  ShieldAlert,
   Heart,
   Calendar,
   Phone,
@@ -26,7 +26,6 @@ import {
   Check,
   X,
   Send,
-  Sparkles,
   ChevronDown,
   ChevronUp,
   AlertTriangle,
@@ -35,75 +34,50 @@ import {
   Trash2,
   CheckCircle2,
   FileText,
-  Lock,
-  ArrowRight,
   Camera,
-  Image,
-  Plus
+  Image
 } from "lucide-react";
 
-export const REGISTERED_ENTITIES = [
-  "Equipo Argentino de Antropología Forense (EAAF)",
-  "Juzgado Nacional en lo Criminal y Correccional Nº 4",
-  "Fiscalía de Distrito de la Boca",
-  "Policía Federal Argentina - División Búsqueda de Personas",
-  "Defensoría del Pueblo (División Especial de Búsquedas)",
-  "Ministerio de Seguridad (Dirección Nacional de Búsqueda de Personas)",
-  "Hospital de Clínicas (Servicio de Trabajo Social)"
-];
-
 export default function App() {
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const dispatch = useAppDispatch();
+  const currentUser = useAppSelector((state) => state.auth.user);
 
-  // App state
-  const [missingPersons, setMissingPersons] = useState<MissingPerson[]>([]);
-  const [nnAdmissions, setNNAdmissions] = useState<NNAdmission[]>([]);
-  const [matches, setMatches] = useState<MatchResult[]>([]);
-  const [alerts, setAlerts] = useState<SystemAlert[]>([]);
-  const [geminiStatus, setGeminiStatus] = useState<"connected" | "demo_simulated">("demo_simulated");
+  const { data: nnAdmissions = [], isLoading: loadingNN, isError: personsError } = usePersons(!!currentUser);
 
-  const [currentUser, setCurrentUser] = useState<RedActivaUser | null>(() => {
-    const saved = localStorage.getItem("redactiva_session");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return null;
-      }
-    }
-    return null;
-  });
+  const missingPersons: MissingPerson[] = [];
+  const matches: MatchResult[] = [];
+  const alerts: SystemAlert[] = [];
+  const loading = loadingNN;
+  const error = personsError ? "No se pudo conectar con el servidor. Reintentando..." : null;
+
+  const createNNMutation = useCreateNNAdmission();
+  const createMPMutation = useCreateMissingPerson();
+  const validateMatchMutation = useValidateMatch();
+  const markAlertMutation = useMarkAlertRead();
 
   // UX controls
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "Unidentified" | "Potential Match" | "Identified">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | NNStatus>("all");
   const [expandedNNId, setExpandedNNId] = useState<string | null>("nn-1"); // Pre-expand nn-1 to show the tracking UI instantly!
-  const [activeView, setActiveView] = useState<"list" | "admission" | "missing">("list");
-  const showNNForm = activeView === "admission";
+  const [activeView, setActiveView] = useState<"list" | "admission">("list");
   const [showMissingModal, setShowMissingModal] = useState<boolean>(false);
   const [showAlertsDrawer, setShowAlertsDrawer] = useState<boolean>(false);
 
   // Form Fields for new NN Admission
   const [nnAge, setNnAge] = useState("");
-  const [nnGender, setNnGender] = useState<"Masculino" | "Femenino" | "Otro" | "Desconocido">("Masculino");
+  const [nnGender, setNnGender] = useState<NNGender>(NNGender.MALE);
   const [nnHeight, setNnHeight] = useState("");
   const [nnWeight, setNnWeight] = useState("");
   const [nnDistinctiveFeatures, setNnDistinctiveFeatures] = useState("");
-  const [nnConsciousness, setNnConsciousness] = useState<"Consciente" | "Desorientado" | "Inconsciente" | "Sedado">("Desorientado");
-  const [nnLocation, setNnLocation] = useState("");
-  const [nnReportedBy, setNnReportedBy] = useState("");
-  const [nnAssignedTo, setNnAssignedTo] = useState<string>("Equipo Argentino de Antropología Forense (EAAF)");
+  const [nnConsciousness, setNnConsciousness] = useState<ConsciousnessLevel>(ConsciousnessLevel.DISORIENTED);
   const [nnNotes, setNnNotes] = useState("");
   const [nnFormSuccess, setNnFormSuccess] = useState("");
   const [nnFormError, setNnFormError] = useState("");
 
-  // NEW: Identifying photos during NN registration
-  const [nnPhotos, setNnPhotos] = useState<{ url: string; description: string }[]>([]);
-  const [newPhotoUrl, setNewPhotoUrl] = useState("");
-  const [newPhotoDescription, setNewPhotoDescription] = useState("");
+  // Identifying photos (File objects — uploaded via multipart)
+  const [nnPhotos, setNnPhotos] = useState<File[]>([]);
   const [dragActive, setDragActive] = useState(false);
-  const [lightboxPhoto, setLightboxPhoto] = useState<{ url: string; description: string } | null>(null);
+  const [lightboxPhoto, setLightboxPhoto] = useState<{ url: string; uploadedAt?: string } | null>(null);
 
   // Form Fields for new Missing Person Modal
   const [mpFullName, setMpFullName] = useState("");
@@ -124,95 +98,51 @@ export default function App() {
   // Inline Match resolution states (per-item)
   const [validationNotes, setValidationNotes] = useState<{ [matchId: string]: string }>({});
 
-  const loadData = async () => {
-    try {
-      const data = await fetchDashboardData();
-      setMissingPersons(data.missingPersons);
-      setNNAdmissions(data.nnAdmissions);
-      setMatches(data.matches);
-      setAlerts(data.alerts);
-      setGeminiStatus(data.geminiStatus);
-      setError(null);
-    } catch (err: any) {
-      console.error("Error loading state:", err);
-      setError("No se pudo conectar con el servidor central de RedActiva. Reintentando...");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLoginSuccess = (user: RedActivaUser) => {
-    localStorage.setItem("redactiva_session", JSON.stringify(user));
-    setCurrentUser(user);
-    if (user.role !== "Ciudadano") {
-      setNnReportedBy(user.fullName);
-      setNnAssignedTo(user.entity);
-    }
+  const handleLoginSuccess = (user: typeof currentUser) => {
+    if (!user) return;
+    dispatch(loginSuccess(user));
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("redactiva_session");
-    setCurrentUser(null);
+    dispatch(logout());
   };
-
-  useEffect(() => {
-    loadData();
-    // Poll updates every 6 seconds to capture any background matches dynamically
-    const poll = setInterval(loadData, 6000);
-    return () => clearInterval(poll);
-  }, []);
 
   const handleRegisterNN = async (e: React.FormEvent) => {
     e.preventDefault();
     setNnFormError("");
     setNnFormSuccess("");
 
-    if (!nnAge || !nnDistinctiveFeatures || !nnLocation || !nnReportedBy) {
+    if (!nnAge || !nnDistinctiveFeatures) {
       setNnFormError("Por favor complete los campos obligatorios (*)");
       return;
     }
 
-    try {
-      setLoading(true);
-      const newAd: Partial<NNAdmission> = {
+    createNNMutation.mutate(
+      {
         estimatedAge: Number(nnAge),
         gender: nnGender,
         height: nnHeight || "No especificada",
         weight: nnWeight || "No especificado",
         distinctiveFeatures: nnDistinctiveFeatures,
         consciousnessLevel: nnConsciousness,
-        location: nnLocation,
-        reportedBy: nnReportedBy,
-        assignedTo: nnAssignedTo,
-        notes: nnNotes,
-        identifyingPhotos: nnPhotos
-      };
-
-      await createNNAdmission(newAd);
-      setNnFormSuccess("¡Registro de ingreso NN ingresado con éxito! Se calculan coincidencias AI.");
-
-      // Reset NN Form fields
-      setNnAge("");
-      setNnGender("Masculino");
-      setNnHeight("");
-      setNnWeight("");
-      setNnDistinctiveFeatures("");
-      setNnConsciousness("Desorientado");
-      setNnLocation("");
-      setNnReportedBy("");
-      setNnAssignedTo("Equipo Argentino de Antropología Forense (EAAF)");
-      setNnNotes("");
-      setNnPhotos([]);
-      setNewPhotoUrl("");
-      setNewPhotoDescription("");
-
-      await loadData();
-    } catch (err) {
-      console.error("Error creating NN:", err);
-      setNnFormError("No se pudo registrar el ingreso NN");
-    } finally {
-      setLoading(false);
-    }
+        notes: nnNotes || undefined,
+        images: nnPhotos.length > 0 ? nnPhotos : undefined,
+      },
+      {
+        onSuccess: () => {
+          setNnFormSuccess("¡Registro de ingreso NN ingresado con éxito!");
+          setNnAge("");
+          setNnGender(NNGender.MALE);
+          setNnHeight("");
+          setNnWeight("");
+          setNnDistinctiveFeatures("");
+          setNnConsciousness(ConsciousnessLevel.DISORIENTED);
+          setNnNotes("");
+          setNnPhotos([]);
+        },
+        onError: () => setNnFormError("No se pudo registrar el ingreso NN"),
+      }
+    );
   };
 
   const handleRegisterMissing = async (e: React.FormEvent) => {
@@ -225,9 +155,8 @@ export default function App() {
       return;
     }
 
-    try {
-      setLoading(true);
-      const newMp: Partial<MissingPerson> = {
+    createMPMutation.mutate(
+      {
         fullName: mpFullName,
         age: Number(mpAge),
         gender: mpGender,
@@ -239,75 +168,48 @@ export default function App() {
         contactName: mpContactName || "Anónimo",
         contactPhone: mpContactPhone || "No especificada",
         photoUrl: mpPhotoUrl || undefined,
-        notes: mpNotes
-      };
-
-      await createMissingPerson(newMp);
-      setMpFormSuccess("¡Campaña de búsqueda registrada! Inicializando rastreo biométrico AI.");
-
-      // Reset inputs
-      setMpFullName("");
-      setMpAge("");
-      setMpGender("Masculino");
-      setMpHeight("");
-      setMpWeight("");
-      setMpFeatures("");
-      setMpDate("");
-      setMpPlace("");
-      setMpContactName("");
-      setMpContactPhone("");
-      setMpNotes("");
-      setMpPhotoUrl("");
-
-      await loadData();
-      setTimeout(() => {
-        setShowMissingModal(false);
-        setMpFormSuccess("");
-      }, 2000);
-    } catch (err) {
-      console.error("Error creating Missing Person:", err);
-      setMpFormError("Error al registrar reporte de búsqueda ciudadana");
-    } finally {
-      setLoading(false);
-    }
+        notes: mpNotes,
+      },
+      {
+        onSuccess: () => {
+          setMpFormSuccess("¡Búsqueda registrada correctamente!");
+          setMpFullName("");
+          setMpAge("");
+          setMpGender("Masculino");
+          setMpHeight("");
+          setMpWeight("");
+          setMpFeatures("");
+          setMpDate("");
+          setMpPlace("");
+          setMpContactName("");
+          setMpContactPhone("");
+          setMpNotes("");
+          setMpPhotoUrl("");
+          setTimeout(() => {
+            setShowMissingModal(false);
+            setMpFormSuccess("");
+          }, 2000);
+        },
+        onError: () => setMpFormError("Error al registrar reporte de búsqueda ciudadana"),
+      }
+    );
   };
 
-  const handleValidateMatchSubmit = async (matchId: string, status: 'Confirmed' | 'Rejected') => {
-    if (currentUser?.role === "Ciudadano") {
-      alert("Error: Las cuentas de acceso ciudadano no cuentan con facultades periciales de homologación.");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const notes = validationNotes[matchId] || "";
-      const auditSignature = `${currentUser?.fullName} (${currentUser?.role} - ${currentUser?.entity.split(" ")[0]})`;
-      await validateMatch(matchId, status, auditSignature, notes || "Cotejado biométricamente y homologado judicialmente.");
-      await loadData();
-    } catch (err) {
-      console.error("Error validating match:", err);
-      alert("Error al tramitar la homologación judicial");
-    } finally {
-      setLoading(false);
-    }
+  const handleValidateMatchSubmit = (matchId: string, status: 'Confirmed' | 'Rejected') => {
+    const notes = validationNotes[matchId] || "";
+    const auditSignature = `${currentUser?.fullName} (${currentUser?.role} - ${currentUser?.entity.split(" ")[0]})`;
+    validateMatchMutation.mutate(
+      { matchId, status, validatedBy: auditSignature, notes: notes || "Cotejado biométricamente y homologado judicialmente." },
+      { onError: () => alert("Error al tramitar la homologación judicial") }
+    );
   };
 
-  const handleMarkAllRead = async () => {
-    try {
-      await markAlertsAsRead("all");
-      await loadData();
-    } catch (err) {
-      console.error("Error marking alerts as read:", err);
-    }
+  const handleMarkAllRead = () => {
+    markAlertMutation.mutate("all");
   };
 
-  const handleDismissAlert = async (alertId: string) => {
-    try {
-      await markAlertsAsRead(alertId);
-      await loadData();
-    } catch (err) {
-      console.error("Error dismissing alert:", err);
-    }
+  const handleDismissAlert = (alertId: string) => {
+    markAlertMutation.mutate(alertId);
   };
 
   // Filter admissions based on search term & status badge selection
@@ -324,7 +226,7 @@ export default function App() {
 
   // Key visual statistics (minimal bar widgets)
   const activeSearchingCount = missingPersons.filter(mp => mp.status === "Searching").length;
-  const activeNNCount = nnAdmissions.filter(nn => nn.status !== "Identified").length;
+  const activeNNCount = nnAdmissions.filter(nn => nn.status !== NNStatus.IDENTIFIED).length;
   const resolvedCasesCount = missingPersons.filter(mp => mp.status === "Resolved" || mp.status === "Found").length;
 
   if (!currentUser) {
@@ -337,7 +239,6 @@ export default function App() {
       {/* 1. Top Header */}
       <Header
         alerts={alerts}
-        geminiStatus={geminiStatus}
         onAlertClick={() => setShowAlertsDrawer(!showAlertsDrawer)}
         onMarkAllRead={handleMarkAllRead}
         currentUser={currentUser}
@@ -376,75 +277,14 @@ export default function App() {
           >
             🏥 Cargar Nuevo Ingreso NN
           </button>
-          <button
-            onClick={() => setActiveView("missing")}
-            className={`pb-3 px-1 text-xs sm:text-sm font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap ${activeView === "missing"
-                ? "border-[#991b1b] text-[#991b1b] font-extrabold"
-                : "border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300"
-              }`}
-          >
-            📢 Campañas Civiles de Paradero
-          </button>
         </div>
 
-        {/* Core Space: If in Civilian Missing view, render MissingPersonReport full-width */}
-        {activeView === "missing" && (
-          <div className="w-full animate-fade-in space-y-4">
-            <div className="bg-red-50 border border-red-100 p-4 rounded-2xl flex items-start gap-3.5 max-w-4xl mx-auto">
-              <ShieldAlert className="h-5 w-5 text-[#991b1b] shrink-0 mt-0.5" />
-              <div className="text-xs text-red-950 leading-relaxed">
-                <p className="font-extrabold uppercase tracking-wide text-[10.5px]">Sección de Cooperación y Denuncias de Paradero Civil</p>
-                <p className="mt-1">
-                  Esta ventana agrupa las búsquedas radicadas por familiares y ciudadanos de paradero activo. Si cree haber localizado o tiene indicios compatibles, aporte información de forma completamente anónima. Su reporte notificará de inmediato al personal asignado. RedActiva prioriza la protección biográfica.
-                </p>
-              </div>
-            </div>
-
-            <div className="w-full">
-              <MissingPersonReport
-                missingPersons={missingPersons}
-                onSubmitReport={async (reportData) => {
-                  try {
-                    await createMissingPerson(reportData);
-                    await loadData();
-                  } catch (err) {
-                    console.error("Error al publicar reporte ciudadano:", err);
-                  }
-                }}
-              />
-            </div>
-          </div>
-        )}
-
         {/* Core Screen Split Panel */}
-        <div className={`grid grid-cols-1 ${activeView === "admission" ? "max-w-xl mx-auto w-full" : "w-full"} gap-6 items-start ${activeView === "missing" ? "hidden" : "block"}`}>
+        <div className={`grid grid-cols-1 ${activeView === "admission" ? "max-w-xl mx-auto w-full" : "w-full"} gap-6 items-start`}>
 
           {/* LEFT COLUMN: Input form for New NN Admissions (Carga de NN) */}
           <div className={`space-y-4 transition-all duration-300 ${activeView === "admission" ? "block w-full animate-fade-in" : "hidden"}`}>
             <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-sm">
-              {currentUser?.role === "Ciudadano" ? (
-                <div className="py-8 text-center space-y-4">
-                  <div className="mx-auto w-12 h-12 bg-red-50 text-[#991b1b] rounded-xl flex items-center justify-center border border-red-150 shadow-sm animate-pulse">
-                    <Lock className="h-5 w-5" />
-                  </div>
-                  <div className="space-y-1">
-                    <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Acceso Restringido o Protegido</h4>
-                    <p className="text-[11px] text-slate-500 max-w-xs mx-auto leading-relaxed">
-                      El ingreso formal de pacientes NN en guardia médica es un acto pericial reservado para personal de salud federado, peritos del EAAF o fuerzas de seguridad. Su cuenta civil tiene estatus de consulta pública.
-                    </p>
-                  </div>
-                  <div className="pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setActiveView("missing")}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-red-50 hover:bg-red-100 border border-red-150 text-[#991b1b] text-[10px] font-extrabold uppercase tracking-wide rounded-xl cursor-pointer transition duration-150"
-                    >
-                      <span>Aportar Datos / Búsquedas Civiles</span>
-                      <ArrowRight className="h-3 w-3" />
-                    </button>
-                  </div>
-                </div>
-              ) : (
                 <>
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
@@ -485,13 +325,11 @@ export default function App() {
                         <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Género *</label>
                         <select
                           value={nnGender}
-                          onChange={(e) => setNnGender(e.target.value as any)}
+                          onChange={(e) => setNnGender(e.target.value as NNGender)}
                           className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:outline-none"
                         >
-                          <option value="Masculino">Masculino</option>
-                          <option value="Femenino">Femenino</option>
-                          <option value="Otro">Otro</option>
-                          <option value="Desconocido">Desconocido</option>
+                          <option value={NNGender.MALE}>Masculino</option>
+                          <option value={NNGender.FEMALE}>Femenino</option>
                         </select>
                       </div>
                     </div>
@@ -523,26 +361,14 @@ export default function App() {
                       <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Nivel de Conciencia *</label>
                       <select
                         value={nnConsciousness}
-                        onChange={(e) => setNnConsciousness(e.target.value as any)}
+                        onChange={(e) => setNnConsciousness(e.target.value as ConsciousnessLevel)}
                         className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg focus:focus:outline-none"
                       >
-                        <option value="Desorientado">Desorientado (Amnesia/Confuso)</option>
-                        <option value="Consciente">Consciente (Orientado/Tímido)</option>
-                        <option value="Inconsciente">Inconsciente / Coma</option>
-                        <option value="Sedado">Sedado farmacológicamente</option>
+                        <option value={ConsciousnessLevel.DISORIENTED}>Desorientado (Amnesia / Confuso)</option>
+                        <option value={ConsciousnessLevel.CONSCIOUS}>Consciente (Orientado)</option>
+                        <option value={ConsciousnessLevel.UNCONSCIOUS}>Inconsciente / Coma</option>
+                        <option value={ConsciousnessLevel.SEDATED}>Sedado farmacológicamente</option>
                       </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Centro de Ingreso *</label>
-                      <input
-                        type="text"
-                        placeholder="Ej: Hospital Cosme Argerich Guardia"
-                        value={nnLocation}
-                        onChange={(e) => setNnLocation(e.target.value)}
-                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg focus:focus:outline-none"
-                        required
-                      />
                     </div>
 
                     <div>
@@ -557,87 +383,46 @@ export default function App() {
                       />
                     </div>
 
-                    {/* Evidencia Visual (Tatuajes y Marcas Identificativas) */}
-                    <div id="nn-photo-uploader-box" className="p-3 bg-red-50/20 border border-red-150/40 rounded-xl space-y-3">
+                    {/* Evidencia Visual — upload real de archivos */}
+                    <div className="p-3 bg-red-50/20 border border-red-150/40 rounded-xl space-y-3">
                       <div className="flex items-center gap-1.5 border-b border-red-150/30 pb-2">
                         <Camera className="h-4 w-4 text-[#991b1b]" />
                         <span className="text-[10px] font-bold text-[#991b1b] uppercase tracking-wider">
-                          Carga de Fotos (Tatuajes / Marcas / Cicatrices)
+                          Fotos (Tatuajes / Marcas / Cicatrices)
                         </span>
+                        {nnPhotos.length > 0 && (
+                          <span className="ml-auto text-[9px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                            {nnPhotos.length} archivo{nnPhotos.length > 1 ? "s" : ""}
+                          </span>
+                        )}
                       </div>
 
-                      {/* Draft Photos Grid */}
+                      {/* Preview de archivos seleccionados */}
                       {nnPhotos.length > 0 && (
-                        <div className="space-y-1.5">
-                          <span className="block text-[9px] font-extrabold text-slate-500 uppercase tracking-wide">
-                            Evidencias a adjuntar ({nnPhotos.length})
-                          </span>
-                          <div className="grid grid-cols-3 gap-2">
-                            {nnPhotos.map((ph, idx) => (
-                              <div key={idx} className="relative rounded-lg border border-[#991b1b]/20 overflow-hidden bg-white shadow-sm flex flex-col">
-                                <img
-                                  src={ph.url}
-                                  alt="Evidencia"
-                                  className="h-16 w-full object-cover"
-                                  referrerPolicy="no-referrer"
-                                />
-                                <div className="p-1 text-[8px] text-slate-600 line-clamp-1 bg-slate-50 flex-1 leading-snug">
-                                  {ph.description}
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => setNnPhotos(nnPhotos.filter((_, i) => i !== idx))}
-                                  className="absolute top-1 right-1 p-0.5 bg-red-600 hover:bg-red-700 text-white rounded-md transition cursor-pointer"
-                                  title="Eliminar foto"
-                                >
-                                  <X className="h-2.5 w-2.5" />
-                                </button>
+                        <div className="grid grid-cols-3 gap-2">
+                          {nnPhotos.map((file, idx) => (
+                            <div key={idx} className="relative rounded-lg border border-[#991b1b]/20 overflow-hidden bg-white shadow-sm flex flex-col">
+                              <img
+                                src={URL.createObjectURL(file)}
+                                alt={file.name}
+                                className="h-16 w-full object-cover"
+                              />
+                              <div className="p-1 text-[8px] text-slate-500 line-clamp-1 bg-slate-50 leading-snug">
+                                {file.name}
                               </div>
-                            ))}
-                          </div>
+                              <button
+                                type="button"
+                                onClick={() => setNnPhotos(nnPhotos.filter((_, i) => i !== idx))}
+                                className="absolute top-1 right-1 p-0.5 bg-red-600 hover:bg-red-700 text-white rounded-md transition cursor-pointer"
+                              >
+                                <X className="h-2.5 w-2.5" />
+                              </button>
+                            </div>
+                          ))}
                         </div>
                       )}
 
-                      {/* Preset picker to ease developer and citizen testing */}
-                      <div className="space-y-1">
-                        <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-wide">
-                          Muestras de Carga Rápida (Click para pre-cargar):
-                        </span>
-                        <div className="flex flex-wrap gap-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setNewPhotoUrl("https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?w=450&h=450&fit=crop");
-                              setNewPhotoDescription("Detalle de tatuaje: Ilustración estilo botánico de flor negra con matices oscuros en miembro superior izquierdo.");
-                            }}
-                            className="px-2 py-1 bg-white hover:bg-red-50 hover:text-[#991b1b] border border-slate-200 text-[9px] rounded-md transition cursor-pointer text-slate-650 font-medium"
-                          >
-                            🌸 Tatuaje de Rosa
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setNewPhotoUrl("https://images.unsplash.com/photo-1516062423079-7ca13cca775d?w=450&h=450&fit=crop");
-                              setNewPhotoDescription("Detalle macro de piel: Cicatriz redondeada blanquecina antigua de sutura cerca de flexión carpiana derecha.");
-                            }}
-                            className="px-2 py-1 bg-white hover:bg-red-50 hover:text-[#991b1b] border border-slate-200 text-[9px] rounded-md transition cursor-pointer text-slate-650 font-medium"
-                          >
-                            🩹 Cicatriz en Muñeca
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setNewPhotoUrl("https://images.unsplash.com/photo-1590246814883-57c511e76533?w=450&h=450&fit=crop");
-                              setNewPhotoDescription("Detalle de tatuaje: Líneas de coordenadas concéntricas simétricas oscuras en hombro.");
-                            }}
-                            className="px-2 py-1 bg-white hover:bg-red-50 hover:text-[#991b1b] border border-slate-200 text-[9px] rounded-md transition cursor-pointer text-slate-650 font-medium"
-                          >
-                            📐 Trazado Geométrico
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Drag and Drop Zone or Live local selector */}
+                      {/* Drag & Drop / file selector */}
                       <div
                         onDragEnter={(e) => { e.preventDefault(); setDragActive(true); }}
                         onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
@@ -645,120 +430,31 @@ export default function App() {
                         onDrop={(e) => {
                           e.preventDefault();
                           setDragActive(false);
-                          const file = e.dataTransfer.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              setNewPhotoUrl(reader.result as string);
-                              if (!newPhotoDescription) {
-                                setNewPhotoDescription("Archivo: " + file.name.split('.')[0] + ".");
-                              }
-                            };
-                            reader.readAsDataURL(file);
-                          }
+                          const files = Array.from<File>(e.dataTransfer.files).filter(f => f.type.startsWith("image/"));
+                          if (files.length) setNnPhotos(prev => [...prev, ...files]);
                         }}
-                        className={`border-2 border-dashed rounded-xl p-3 text-center transition ${dragActive ? 'border-[#991b1b] bg-red-50/40' : 'border-slate-200 hover:border-[#991b1b]/30'
-                          }`}
+                        className={`border-2 border-dashed rounded-xl p-3 text-center transition ${dragActive ? "border-[#991b1b] bg-red-50/40" : "border-slate-200 hover:border-[#991b1b]/30"}`}
                       >
                         <label className="cursor-pointer block space-y-1">
                           <Image className="mx-auto h-5 w-5 text-slate-400" />
                           <div className="text-[10px] text-slate-700 font-semibold">
-                            Arrastre la foto aquí o <span className="text-[#991b1b] underline">seleccione un archivo local</span>
+                            Arrastre aquí o{" "}
+                            <span className="text-[#991b1b] underline">seleccione archivos</span>
                           </div>
-                          <p className="text-[8px] text-slate-400">Soporta fotos, capturas o diagramaciones biomédicas</p>
+                          <p className="text-[8px] text-slate-400">JPG / PNG / WEBP — hasta 10 archivos, 5 MB c/u</p>
                           <input
                             type="file"
-                            accept="image/*"
+                            accept="image/jpeg,image/png,image/webp"
+                            multiple
                             onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                const reader = new FileReader();
-                                reader.onloadend = () => {
-                                  setNewPhotoUrl(reader.result as string);
-                                  if (!newPhotoDescription) {
-                                    setNewPhotoDescription("Foto cargada de seña particular");
-                                  }
-                                };
-                                reader.readAsDataURL(file);
-                              }
+                              const files = Array.from(e.target.files ?? []);
+                              if (files.length) setNnPhotos(prev => [...prev, ...files]);
+                              e.target.value = "";
                             }}
                             className="hidden"
                           />
                         </label>
                       </div>
-
-                      {/* Input form details for manual fields */}
-                      <div className="space-y-2 pt-1 border-t border-slate-100">
-                        <div className="grid grid-cols-1 gap-2">
-                          <div className="space-y-1">
-                            <label className="block text-[8px] font-bold text-slate-500 uppercase">
-                              Dirección URL de la Imagen (o se genera del archivo anterior)
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="https://..."
-                              value={newPhotoUrl}
-                              onChange={(e) => setNewPhotoUrl(e.target.value)}
-                              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-[10px] focus:outline-none"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="block text-[8px] font-bold text-slate-500 uppercase">
-                              Descripción de la marca (Ej: Tatuaje de rosa azul)
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="Descripción identificadora de la marca pericial..."
-                              value={newPhotoDescription}
-                              onChange={(e) => setNewPhotoDescription(e.target.value)}
-                              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-[10px] focus:outline-none"
-                            />
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!newPhotoUrl) return;
-                            setNnPhotos([
-                              ...nnPhotos,
-                              { url: newPhotoUrl, description: newPhotoDescription || "Seña identificadora particular." }
-                            ]);
-                            setNewPhotoUrl("");
-                            setNewPhotoDescription("");
-                          }}
-                          disabled={!newPhotoUrl}
-                          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white text-[9px] font-bold uppercase rounded-lg transition duration-150 disabled:opacity-40 cursor-pointer"
-                        >
-                          <Plus className="h-3 w-3" />
-                          <span>Anexar Foto de Evidencias</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Profesional Reportante *</label>
-                      <input
-                        type="text"
-                        placeholder="Ej: Dr. Luis Soria - Jefe de Turno"
-                        value={nnReportedBy}
-                        onChange={(e) => setNnReportedBy(e.target.value)}
-                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg focus:focus:outline-none"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Entidad Designada (Búsqueda y Custodia) *</label>
-                      <select
-                        value={nnAssignedTo}
-                        onChange={(e) => setNnAssignedTo(e.target.value)}
-                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg focus:focus:outline-none"
-                      >
-                        {REGISTERED_ENTITIES.map((ent) => (
-                          <option key={ent} value={ent}>{ent}</option>
-                        ))}
-                      </select>
                     </div>
 
                     <div>
@@ -780,7 +476,7 @@ export default function App() {
                       Registrar e Iniciar Cotejo
                     </button>
                   </form>
-                </>)}
+                </>
             </div>
           </div>
 
@@ -830,9 +526,9 @@ export default function App() {
                   className="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
                 >
                   <option value="all">Ver: Todos los Casos</option>
-                  <option value="Unidentified">Ver: Sin Identificar aún</option>
-                  <option value="Potential Match">Ver: Con Alertas AI</option>
-                  <option value="Identified">Ver: Resueltos / Identificados</option>
+                  <option value={NNStatus.UNIDENTIFIED}>Ver: Sin Identificar aún</option>
+                  <option value={NNStatus.POTENTIAL_MATCH}>Ver: Con Coincidencias</option>
+                  <option value={NNStatus.IDENTIFIED}>Ver: Resueltos / Identificados</option>
                 </select>
               </div>
             </div>
@@ -854,9 +550,9 @@ export default function App() {
                   return (
                     <div
                       key={ad.id}
-                      className={`bg-white rounded-2xl border transition-all duration-200 overflow-hidden ${ad.status === "Identified"
+                      className={`bg-white rounded-2xl border transition-all duration-200 overflow-hidden ${ad.status === NNStatus.IDENTIFIED
                           ? "border-emerald-200 bg-slate-50/40 opacity-90"
-                          : ad.status === "Potential Match"
+                          : ad.status === NNStatus.POTENTIAL_MATCH
                             ? "border-amber-300 ring-1 ring-amber-200 shadow-sm"
                             : "border-slate-200 hover:border-slate-350"
                         }`}
@@ -864,9 +560,9 @@ export default function App() {
                       {/* Top indicator of the card */}
                       <div className="p-4 sm:p-5 flex items-start justify-between gap-4">
                         <div className="flex gap-3">
-                          <div className={`p-2.5 rounded-xl border ${ad.status === "Identified"
+                          <div className={`p-2.5 rounded-xl border ${ad.status === NNStatus.IDENTIFIED
                               ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : ad.status === "Potential Match"
+                              : ad.status === NNStatus.POTENTIAL_MATCH
                                 ? "bg-amber-50 text-amber-700 border-amber-200 animate-pulse"
                                 : "bg-slate-50 text-slate-700 border-slate-200"
                             }`}>
@@ -879,13 +575,13 @@ export default function App() {
                                 NN de aprox. {ad.estimatedAge} años ({ad.gender})
                               </h4>
 
-                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${ad.status === "Identified"
+                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${ad.status === NNStatus.IDENTIFIED
                                   ? "bg-green-50 text-green-700 border border-green-200"
-                                  : ad.status === "Potential Match"
+                                  : ad.status === NNStatus.POTENTIAL_MATCH
                                     ? "bg-amber-50 text-amber-700 border border-amber-200 animate-pulse"
                                     : "bg-slate-100 text-slate-600"
                                 }`}>
-                                {ad.status === "Identified" ? "✓ IDENTIFICADO RESUELTO" : ad.status === "Potential Match" ? "🔍 CRUCE DIRECTO ENCONTRADO" : "SIN IDENTIFICAR"}
+                                {ad.status === NNStatus.IDENTIFIED ? "✓ IDENTIFICADO" : ad.status === NNStatus.POTENTIAL_MATCH ? "🔍 COINCIDENCIA" : "SIN IDENTIFICAR"}
                               </span>
                             </div>
 
@@ -923,12 +619,12 @@ export default function App() {
                                     type="button"
                                     key={pIdx}
                                     onClick={() => setLightboxPhoto(photo)}
-                                    className="group text-left border border-slate-200 rounded-xl overflow-hidden bg-white shadow-xs focus:outline-none focus:ring-1 focus:ring-[#991b1b] cursor-pointer transition flex flex-col hover:border-[#991b1b]/50"
+                                    className="group border border-slate-200 rounded-xl overflow-hidden bg-white shadow-xs focus:outline-none focus:ring-1 focus:ring-[#991b1b] cursor-pointer transition hover:border-[#991b1b]/50"
                                   >
                                     <div className="aspect-square relative w-full overflow-hidden bg-slate-50">
                                       <img
                                         src={photo.url}
-                                        alt={photo.description}
+                                        alt="Evidencia"
                                         className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                                         referrerPolicy="no-referrer"
                                       />
@@ -937,11 +633,6 @@ export default function App() {
                                           Ampliar
                                         </span>
                                       </div>
-                                    </div>
-                                    <div className="p-1 px-1.5 bg-slate-55 border-t border-slate-100 flex-1">
-                                      <p className="text-[9px] text-slate-500 leading-snug line-clamp-2">
-                                        {photo.description}
-                                      </p>
                                     </div>
                                   </button>
                                 ))}
@@ -953,7 +644,7 @@ export default function App() {
                             <span>Conciencia: <strong className="text-slate-700">{ad.consciousnessLevel}</strong></span>
                             <span>Estatura: <strong className="text-slate-700">{ad.height}</strong></span>
                             <span>Peso: <strong className="text-slate-700">{ad.weight}</strong></span>
-                            <span>Designado a: <strong className="text-[#991b1b] bg-red-50 border border-red-150 px-2 py-0.5 rounded-md font-extrabold uppercase text-[9px] inline-block">{ad.assignedTo || "Equipo Argentino de Antropología Forense (EAAF)"}</strong></span>
+                            {ad.assignedTo && <span>Designado a: <strong className="text-[#991b1b] bg-red-50 border border-red-150 px-2 py-0.5 rounded-md font-extrabold uppercase text-[9px] inline-block">{ad.assignedTo}</strong></span>}
                             {ad.notes && <span>Notas: <strong className="text-slate-700 italic">{ad.notes}</strong></span>}
                           </div>
                         </div>
@@ -967,12 +658,12 @@ export default function App() {
                             <span>{isExpanded ? "Ocultar Seguimiento" : "Ver Seguimiento y Cruces de Datos"}</span>
                             {nnMatches.length > 0 && (
                               <span className="bg-slate-900 text-white font-mono text-[9px] font-bold px-1.5 py-0.2 rounded-full">
-                                {nnMatches.length} AI
+                                {nnMatches.length}
                               </span>
                             )}
                           </button>
 
-                          {ad.status === "Identified" && (
+                          {ad.status === NNStatus.IDENTIFIED && (
                             <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-1">
                               <CheckCircle2 className="h-3.5 w-3.5" /> Caso Homologado por Fiscalía
                             </span>
@@ -996,9 +687,8 @@ export default function App() {
                           {/* Render Matches or state if no match */}
                           {nnMatches.length === 0 ? (
                             <div className="bg-white p-4 rounded-xl border border-slate-200 text-center text-xs text-slate-500 italic flex flex-col items-center justify-center space-y-2">
-                              <Sparkles className="h-5 w-5 text-slate-450 animate-pulse" />
-                              <p>Buscando concordancias semánticas automáticas en la base de datos nacional...</p>
-                              <p className="text-[10px] text-slate-400">Si conoce una persona desaparecida compatible, agréguela arriba y el motor procesará instantáneamente.</p>
+                              <Search className="h-5 w-5 text-slate-400" />
+                              <p>Sin coincidencias registradas en la base de datos nacional.</p>
                             </div>
                           ) : (
                             <div className="space-y-4">
@@ -1010,13 +700,12 @@ export default function App() {
                                   <div key={match.id} className="bg-white rounded-xl border border-slate-200 p-4 space-y-4 shadow-sm">
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-2.5">
                                       <div className="flex items-center gap-1.5">
-                                        <Sparkles className="h-4 w-4 text-amber-500" />
                                         <span className="text-xs font-bold text-slate-800">
                                           Coincidencia Estimada:
                                         </span>
                                         <span className={`text-xs font-extrabold font-mono px-2 py-0.5 rounded-full ${match.confidence >= 85 ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
                                           }`}>
-                                          {match.confidence}% de Similitud Semántica
+                                          {match.confidence}%
                                         </span>
                                       </div>
 
@@ -1073,15 +762,6 @@ export default function App() {
                                         {/* Validation action panel */}
                                         <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
                                           {match.status === "Pending" ? (
-                                            currentUser?.role === "Ciudadano" ? (
-                                              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-start gap-2.5 text-slate-550">
-                                                <Lock className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
-                                                <div className="text-[10px] text-left leading-relaxed">
-                                                  <span className="font-extrabold text-slate-700 block uppercase tracking-wider mb-0.5">Homologación Reservada</span>
-                                                  Como ciudadano, usted puede visualizar estas correlaciones automatizadas creadas por la IA. Para validarlas con efectos legales, se requiere la intervención del personal del EAAF, médicos o representantes fiscales competentes.
-                                                </div>
-                                              </div>
-                                            ) : (
                                               <div className="space-y-2">
                                                 <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide">
                                                   Anotación Judicial / Notas de Homologación
@@ -1112,7 +792,6 @@ export default function App() {
                                                   </button>
                                                 </div>
                                               </div>
-                                            )
                                           ) : (
                                             <div className={`p-2.5 rounded-xl text-[11px] border ${match.status === 'Confirmed'
                                                 ? "bg-green-50 border-green-200 text-green-800"
@@ -1456,35 +1135,25 @@ export default function App() {
             <div className="aspect-square w-full bg-slate-50 relative overflow-hidden flex items-center justify-center border-b border-slate-100">
               <img
                 src={lightboxPhoto.url}
-                alt={lightboxPhoto.description}
+                alt="Evidencia médica"
                 className="max-h-full max-w-full object-contain"
                 referrerPolicy="no-referrer"
               />
             </div>
 
-            {/* Description panel */}
-            <div className="p-5 bg-slate-50 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
-                  Descripción Pericial Registrada
+            <div className="p-4 bg-slate-50 flex items-center justify-between">
+              {lightboxPhoto.uploadedAt && (
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {new Date(lightboxPhoto.uploadedAt).toLocaleString()}
                 </span>
-                <span className="bg-red-50 text-[#991b1b] border border-red-100 text-[9px] font-bold px-2 py-0.5 rounded-md uppercase font-mono">
-                  Evidencia Médica
-                </span>
-              </div>
-              <p className="text-xs text-slate-700 leading-relaxed font-semibold bg-white p-3 rounded-xl border border-slate-200 italic shadow-sm">
-                "{lightboxPhoto.description}"
-              </p>
-
-              <div className="pt-3 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setLightboxPhoto(null)}
-                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition cursor-pointer uppercase shadow-md"
-                >
-                  Cerrar Vista Ampliada
-                </button>
-              </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setLightboxPhoto(null)}
+                className="ml-auto px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition cursor-pointer uppercase"
+              >
+                Cerrar
+              </button>
             </div>
 
           </div>
@@ -1498,7 +1167,7 @@ export default function App() {
             RedActiva — Sistema Federal de Detección y Vinculación de Personas Desaparecidas en Tiempo Real
           </p>
           <p className="text-[10px] text-slate-300 leading-normal max-w-xl mx-auto">
-            Este prototipo demuestra la automatización neural de búsqueda de paradero mediante el motor Gemini de Inteligencia Artificial de Google. Cumple con leyes de hábeas corpus e integridad biométrica de personas vulnerables. Sus interfaces respetan las prácticas suizas de diseño minimalista.
+            Sistema Federal de Búsqueda y Vinculación de Personas. Cumple con leyes de hábeas corpus e integridad biométrica de personas vulnerables.
           </p>
         </div>
       </footer>

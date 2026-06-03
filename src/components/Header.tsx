@@ -1,17 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { Activity, Bell, Shield, Radio, Wifi, Clock, LogOut, KeyRound } from "lucide-react";
 import { SystemAlert, RedActivaUser } from "../types";
+import { getDisplayName } from "../utils/userPrefix";
 
 interface HeaderProps {
   alerts: SystemAlert[];
-  geminiStatus: "connected" | "demo_simulated";
   onAlertClick: () => void;
   onMarkAllRead: () => void;
   currentUser: RedActivaUser | null;
   onLogout: () => void;
 }
 
-export default function Header({ alerts, geminiStatus, onAlertClick, onMarkAllRead, currentUser, onLogout }: HeaderProps) {
+export default function Header({ alerts, onAlertClick, onMarkAllRead, currentUser, onLogout }: HeaderProps) {
   const [time, setTime] = useState(new Date());
   const unreadCount = alerts.filter(a => !a.read).length;
 
@@ -41,9 +41,6 @@ export default function Header({ alerts, geminiStatus, onAlertClick, onMarkAllRe
                 <span className="text-[#991b1b]">Red</span>
                 <span className="text-slate-900 font-light tracking-wide">Activa</span>
               </h1>
-              <span className="bg-red-50 border border-red-150 text-[10px] text-[#991b1b] font-mono px-2 py-0.5 rounded-md uppercase tracking-wider font-bold">
-                MÓDULO FEDERAL
-              </span>
             </div>
             <p className="text-[10px] text-slate-400 tracking-wider font-semibold uppercase mt-0.5">
               Conectando Vidas en Tiempo Real
@@ -71,7 +68,7 @@ export default function Header({ alerts, geminiStatus, onAlertClick, onMarkAllRe
                 referrerPolicy="no-referrer"
               />
               <div className="hidden lg:block text-left text-xs">
-                <p className="font-extrabold text-slate-900 leading-none">{currentUser.fullName}</p>
+                <p className="font-extrabold text-slate-900 leading-none">{getDisplayName(currentUser)}</p>
                 <p className="text-[9px] text-[#991b1b] font-mono uppercase tracking-wider font-bold mt-0.5 max-w-[200px] truncate" title={currentUser.entity}>
                   {currentUser.role} • {currentUser.entity.split(" ")[0]}
                 </p>

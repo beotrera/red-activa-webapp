@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Hospital, User, AlertCircle, PlusCircle, Search, ShieldAlert, Heart, ClipboardList } from "lucide-react";
-import { NNAdmission } from "../types";
+import { NNAdmission, NNStatus } from "../types";
 
 interface HospitalAdmissionProps {
   nnAdmissions: NNAdmission[];
@@ -48,7 +48,7 @@ export default function HospitalAdmission({ nnAdmissions, onSubmitAdmission }: H
     };
 
     onSubmitAdmission(newAd);
-    setSuccessMsg("Registro ingresado exitosamente al sistema. Computando posibles coincidencias AI...");
+    setSuccessMsg("Registro ingresado exitosamente al sistema.");
     
     // Reset Form
     setEstimatedAge("");
@@ -110,25 +110,25 @@ export default function HospitalAdmission({ nnAdmissions, onSubmitAdmission }: H
                 <div 
                   key={ad.id} 
                   className={`border rounded-2xl p-4 transition-all duration-200 relative ${
-                    ad.status === "Identified" 
+                    ad.status === NNStatus.IDENTIFIED 
                       ? "bg-slate-50/50 border-emerald-300 text-slate-450" 
-                      : ad.status === "Potential Match" 
+                      : ad.status === NNStatus.POTENTIAL_MATCH 
                       ? "bg-white border-slate-300 shadow-sm ring-1 ring-slate-900"
                       : "bg-white border-slate-200 hover:border-slate-350"
                   }`}
                 >
                   {/* Identification tag */}
                   <span className={`absolute top-4 right-4 text-[9px] font-bold px-2 py-0.5 rounded-md ${
-                    ad.status === "Identified"
+                    ad.status === NNStatus.IDENTIFIED
                       ? "bg-green-50 text-green-700 border border-green-200"
-                      : ad.status === "Potential Match"
+                      : ad.status === NNStatus.POTENTIAL_MATCH
                       ? "bg-amber-50 text-amber-700 border border-amber-200 animate-pulse"
                       : "bg-slate-100 text-slate-600"
                   }`}>
-                    {ad.status === "Identified" 
+                    {ad.status === NNStatus.IDENTIFIED 
                       ? "✓ IDENTIFICADO" 
-                      : ad.status === "Potential Match" 
-                      ? "🔍 CON ALERTA AI" 
+                      : ad.status === NNStatus.POTENTIAL_MATCH 
+                      ? "🔍 CON COINCIDENCIA"
                       : "SIN IDENTIFICAR"}
                   </span>
 
@@ -321,7 +321,7 @@ export default function HospitalAdmission({ nnAdmissions, onSubmitAdmission }: H
               className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-1.5 shadow transition-all cursor-pointer"
             >
               <Hospital className="h-4 w-4" />
-              Ingresar NN y Cotejar AI
+              Registrar Ingreso NN
             </button>
           </form>
         )}

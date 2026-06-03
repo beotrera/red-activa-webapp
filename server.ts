@@ -1,8 +1,7 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenAI, Type } from "@google/genai";
-import { MissingPerson, NNAdmission, MatchResult, SystemAlert } from "./src/types";
+import { MissingPerson, NNAdmission, MatchResult, SystemAlert, NNGender, ConsciousnessLevel, NNStatus } from "./src/types";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -68,56 +67,56 @@ let nnAdmissions: NNAdmission[] = [
   {
     id: "nn-1",
     estimatedAge: 43,
-    gender: "Masculino",
+    gender: NNGender.MALE,
     height: "1.80m",
     weight: "80kg",
     distinctiveFeatures: "Ingresó desorientado. Tiene un dibujo de rosa azulada o flor oscura en la extremidad superior izquierda. Lleva gorra negra en sus pertenencias y viste pantalón gris jogging con campera negra.",
-    consciousnessLevel: "Desorientado",
+    consciousnessLevel: ConsciousnessLevel.DISORIENTED,
     location: "Hospital General de Agudos Dr. Cosme Argerich",
     dateOfAdmission: "2026-06-01 02:30",
-    status: "Potential Match",
+    status: NNStatus.POTENTIAL_MATCH,
     reportedBy: "Guardia Médica - Dr. Luis Soria",
     assignedTo: "Equipo Argentino de Antropología Forense (EAAF)",
     notes: "No recuerda su nombre completo ni su domicilio, refiere llamarse Carlos.",
     identifyingPhotos: [
       {
         url: "https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?w=450&h=450&fit=crop",
-        description: "Detalle de tatuaje: Ilustración estilo botánico de flor (rosa negra con matices oscuros y sombreado) en miembro superior izquierdo."
+        uploadedAt: "2026-06-01T02:30:00.000Z"
       }
     ]
   },
   {
     id: "nn-2",
     estimatedAge: 22,
-    gender: "Femenino",
+    gender: NNGender.FEMALE,
     height: "1.60m",
     weight: "52kg",
     distinctiveFeatures: "Paciente traída por personal policial. Inconsciente tras desvanecimiento en vía pública. Presenta una marca o marca de sutura antigua en la muñeca derecha. Viste un buzo tipo abrigo color negro de algodón y pantalones denim oscuros.",
-    consciousnessLevel: "Inconsciente",
+    consciousnessLevel: ConsciousnessLevel.UNCONSCIOUS,
     location: "Hospital de Clínicas José de San Martín",
     dateOfAdmission: "2026-06-01 21:15",
-    status: "Potential Match",
+    status: NNStatus.POTENTIAL_MATCH,
     reportedBy: "Servicio de Emergencias - Dra. Ana Falco",
     assignedTo: "Fiscalía de Distrito de la Boca",
     notes: "Se encuentra estable metabólicamente pero bajo observación neurológica.",
     identifyingPhotos: [
       {
         url: "https://images.unsplash.com/photo-1516062423079-7ca13cca775d?w=450&h=450&fit=crop",
-        description: "Detalle macro de piel: Cicatriz redondeada blanquecina antigua cerca de flexión carpiana derecha."
+        uploadedAt: "2026-06-01T21:15:00.000Z"
       }
     ]
   },
   {
     id: "nn-3",
     estimatedAge: 35,
-    gender: "Masculino",
+    gender: NNGender.MALE,
     height: "1.72m",
     weight: "70kg",
     distinctiveFeatures: "Varón ingresado por la policía federal tras ser encontrado perdido en autopista. Cabello negro corto, barba tupida, cicatriz en la mejilla izquierda. Camisa azul a cuadros.",
-    consciousnessLevel: "Consciente",
+    consciousnessLevel: ConsciousnessLevel.CONSCIOUS,
     location: "Comisaría Vecinal 14B",
     dateOfAdmission: "2026-06-02 08:00",
-    status: "Unidentified",
+    status: NNStatus.UNIDENTIFIED,
     reportedBy: "Subcomisario Héctor Cardozo",
     assignedTo: "Policía Federal Argentina - División Búsqueda de Personas",
     notes: "Habla con dificultad, muy tímido o paranoico. No aporta datos filiatorios.",
@@ -180,32 +179,8 @@ let alerts: SystemAlert[] = [
 ];
 
 // Initialize GoogleGenAI client lazily or if key exists
-let genAI: GoogleGenAI | null = null;
-function getGeminiClient(): GoogleGenAI | null {
-  if (!genAI) {
-    const key = process.env.GEMINI_API_KEY;
-    if (key && key !== "MY_GEMINI_API_KEY") {
-      try {
-        genAI = new GoogleGenAI({
-          apiKey: key,
-          httpOptions: {
-            headers: {
-              'User-Agent': 'aistudio-build',
-            }
-          }
-        });
-        console.log("Gemini SDK successfully initialized.");
-      } catch (err) {
-        console.error("Failed to initialize Gemini Client:", err);
-      }
-    }
-  }
-  return genAI;
-}
-
-// Simulated local rule-based matcher for fallback and quick demo fidelity
 function computeLocalMatches() {
-  const activeNNs = nnAdmissions.filter(n => n.status !== "Identified");
+  const activeNNs = nnAdmissions.filter(n => n.status !== NNStatus.IDENTIFIED);
   const activeMPs = missingPersons.filter(m => m.status === "Searching");
 
   activeNNs.forEach(nn => {
@@ -218,11 +193,11 @@ function computeLocalMatches() {
       const reasons: string[] = [];
 
       // Simple gender match
-      if (nn.gender === mp.gender || nn.gender === "Desconocido") {
-        score += 15;
-      } else {
+      const mpGenderMapped = mp.gender === "Masculino" ? NNGender.MALE : mp.gender === "Femenino" ? NNGender.FEMALE : null;
+      if (mpGenderMapped !== null && nn.gender !== mpGenderMapped) {
         return; // Mismatched genders are skipped
       }
+      score += 15;
 
       // Age closeness
       const ageDiff = Math.abs(nn.estimatedAge - mp.age);
@@ -301,126 +276,10 @@ function computeLocalMatches() {
           read: false
         });
 
-        nn.status = "Potential Match";
+        nn.status = NNStatus.POTENTIAL_MATCH;
       }
     });
   });
-}
-
-// Intelligent Gemini Matcher
-async function runGeminiMatching(): Promise<boolean> {
-  const client = getGeminiClient();
-  if (!client) {
-    console.log("Skipping Gemini match: Native client is not set up.");
-    return false;
-  }
-
-  const activeNNs = nnAdmissions.filter(n => n.status !== "Identified");
-  const activeMPs = missingPersons.filter(m => m.status === "Searching");
-
-  if (activeNNs.length === 0 || activeMPs.length === 0) return true;
-
-  try {
-    const response = await client.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: `Analiza las dos listas de personas ingresadas y reportes de búsquedas en tiempo real.
-Devuelve posibles cruces semánticos donde la probabilidad de coincidencia sea mayor a 35%.
-
-PACIENTES NN INGRESADOS:
-${JSON.stringify(activeNNs.map(n => ({ id: n.id, estimatedAge: n.estimatedAge, gender: n.gender, features: n.distinctiveFeatures, details: n.notes })), null, 2)}
-
-PERSONAS DESAPARECIDAS REPORTADAS:
-${JSON.stringify(activeMPs.map(m => ({ id: m.id, fullName: m.fullName, age: m.age, gender: m.gender, features: m.distinctiveFeatures, details: m.notes })), null, 2)}
-
-RESPONDE ÚNICAMENTE CON UN JSON VÁLIDO en el siguiente esquema, sin textos extra, sin marcadores de formato adicionales fuera del markdown de JSON.
-`,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            coincidencias: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  nnId: { type: Type.STRING },
-                  missingPersonId: { type: Type.STRING },
-                  confidence: { type: Type.INTEGER, description: "Número entre 1 y 100" },
-                  reasons: {
-                    type: Type.ARRAY,
-                    items: { type: Type.STRING },
-                    description: "Lista de razones en español fundamentadas en características físicas coincidente"
-                  }
-                },
-                required: ["nnId", "missingPersonId", "confidence", "reasons"]
-              }
-            }
-          },
-          required: ["coincidencias"]
-        }
-      }
-    });
-
-    const text = response.text;
-    if (!text) {
-      console.error("Empty response from Gemini matcher.");
-      return false;
-    }
-
-    const result = JSON.parse(text.trim());
-    const aiCoincidencias = result.coincidencias || [];
-
-    aiCoincidencias.forEach((aiMatch: any) => {
-      // Ensure the IDs actually exist
-      const nnExists = nnAdmissions.some(n => n.id === aiMatch.nnId);
-      const mpExists = missingPersons.some(m => m.id === aiMatch.missingPersonId);
-
-      if (!nnExists || !mpExists) return;
-
-      // Upsert or insert match
-      const existingIndex = matches.findIndex(m => m.nnId === aiMatch.nnId && m.missingPersonId === aiMatch.missingPersonId);
-      if (existingIndex !== -1) {
-        // Update reasons and confidence
-        matches[existingIndex].confidence = aiMatch.confidence;
-        matches[existingIndex].reasons = aiMatch.reasons;
-      } else {
-        const newMatch: MatchResult = {
-          id: `match-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-          nnId: aiMatch.nnId,
-          missingPersonId: aiMatch.missingPersonId,
-          confidence: aiMatch.confidence,
-          reasons: aiMatch.reasons,
-          status: "Pending"
-        };
-        matches.push(newMatch);
-
-        // Update NN Status if confidence is high
-        const nn = nnAdmissions.find(n => n.id === aiMatch.nnId);
-        if (nn && aiMatch.confidence > 50) {
-          nn.status = "Potential Match";
-        }
-
-        // Trigger System Alert
-        alerts.unshift({
-          id: `alert-${Date.now()}`,
-          type: "match_alert",
-          title: `Coincidencia AI de ${aiMatch.confidence}%`,
-          message: `El motor neuronal detectó correspondencia entre NN (${nn?.location || "desconocido"}) y ${missingPersons.find(m => m.id === aiMatch.missingPersonId)?.fullName}.`,
-          timestamp: new Date().toISOString(),
-          matchId: newMatch.id,
-          nnId: aiMatch.nnId,
-          missingPersonId: aiMatch.missingPersonId,
-          read: false
-        });
-      }
-    });
-
-    return true;
-  } catch (err) {
-    console.error("Gemini Matcher failed unexpectedly:", err);
-    return false;
-  }
 }
 
 // Central API endpoints
@@ -430,7 +289,6 @@ app.get("/api/data", (req, res) => {
     nnAdmissions,
     matches,
     alerts,
-    geminiStatus: getGeminiClient() ? "connected" : "demo_simulated"
   });
 });
 
@@ -477,12 +335,7 @@ app.post("/api/missing-persons", async (req, res) => {
 
   missingPersons.unshift(newPerson);
 
-  // Trigger match checks
-  const runReal = await runGeminiMatching();
-  if (!runReal) {
-    computeLocalMatches();
-  }
-
+  computeLocalMatches();
   res.status(201).json(newPerson);
 });
 
@@ -520,7 +373,7 @@ app.post("/api/nn-admissions", async (req, res) => {
     consciousnessLevel,
     location,
     dateOfAdmission: dateOfAdmission || new Date().toISOString().slice(0, 16).replace('T', ' '),
-    status: "Unidentified",
+    status: NNStatus.UNIDENTIFIED,
     reportedBy: reportedBy || "Guardia Auxiliar Portal",
     assignedTo: assignedTo || "Equipo Argentino de Antropología Forense (EAAF)",
     notes,
@@ -529,12 +382,7 @@ app.post("/api/nn-admissions", async (req, res) => {
 
   nnAdmissions.unshift(newNN);
 
-  // Trigger matching
-  const runReal = await runGeminiMatching();
-  if (!runReal) {
-    computeLocalMatches();
-  }
-
+  computeLocalMatches();
   res.status(201).json(newNN);
 });
 
@@ -558,7 +406,7 @@ app.post("/api/match/validate", (req, res) => {
   if (status === "Confirmed") {
     // Mark both as fully resolved / found!
     const nn = nnAdmissions.find(n => n.id === match.nnId);
-    if (nn) nn.status = "Identified";
+    if (nn) nn.status = NNStatus.IDENTIFIED;
 
     const mp = missingPersons.find(m => m.id === match.missingPersonId);
     if (mp) mp.status = "Resolved";
