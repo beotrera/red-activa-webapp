@@ -1,0 +1,6 @@
+{
+  "name": "RedActiva",
+  "description": "Plataforma inteligente y en tiempo real para detección, comparación neuronal y vinculación de personas desaparecidas con ingresos no identificados (NN).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
