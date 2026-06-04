@@ -4,11 +4,13 @@ import {
   fetchPersons,
   createMissingPerson,
   createNNAdmission,
+  updatePerson,
   validateMatch,
   markAlertsAsRead,
   loginUser,
   CreateNNAdmissionPayload,
 } from "../utils/api";
+import type { NNAdmission } from "../types";
 import type { MissingPerson } from "../types";
 
 export const DASHBOARD_KEY = ["dashboard"] as const;
@@ -31,6 +33,15 @@ export function usePersons(enabled = true) {
     refetchInterval: 6000,
     staleTime: 0,
     enabled,
+  });
+}
+
+export function useUpdatePerson() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<NNAdmission> }) =>
+      updatePerson(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: PERSONS_KEY }),
   });
 }
 

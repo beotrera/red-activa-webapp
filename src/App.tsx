@@ -10,6 +10,7 @@ import {
   useMarkAlertRead,
 } from "./hooks/useApi";
 import Header from "./components/Header";
+import NNDetail from "./components/NNDetail";
 import Login from "./components/Login";
 import {
   Activity,
@@ -58,7 +59,7 @@ export default function App() {
   // UX controls
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | NNStatus>("all");
-  const [expandedNNId, setExpandedNNId] = useState<string | null>("nn-1"); // Pre-expand nn-1 to show the tracking UI instantly!
+  const [selectedNNId, setSelectedNNId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<"list" | "admission">("list");
   const [showMissingModal, setShowMissingModal] = useState<boolean>(false);
   const [showAlertsDrawer, setShowAlertsDrawer] = useState<boolean>(false);
@@ -95,8 +96,6 @@ export default function App() {
   const [mpFormSuccess, setMpFormSuccess] = useState("");
   const [mpFormError, setMpFormError] = useState("");
 
-  // Inline Match resolution states (per-item)
-  const [validationNotes, setValidationNotes] = useState<{ [matchId: string]: string }>({});
 
   const handleLoginSuccess = (user: typeof currentUser) => {
     if (!user) return;
@@ -196,10 +195,9 @@ export default function App() {
   };
 
   const handleValidateMatchSubmit = (matchId: string, status: 'Confirmed' | 'Rejected') => {
-    const notes = validationNotes[matchId] || "";
     const auditSignature = `${currentUser?.fullName} (${currentUser?.role} - ${currentUser?.entity.split(" ")[0]})`;
     validateMatchMutation.mutate(
-      { matchId, status, validatedBy: auditSignature, notes: notes || "Cotejado biométricamente y homologado judicialmente." },
+      { matchId, status, validatedBy: auditSignature, notes: "Cotejado biométricamente y homologado judicialmente." },
       { onError: () => alert("Error al tramitar la homologación judicial") }
     );
   };
@@ -480,8 +478,22 @@ export default function App() {
             </div>
           </div>
 
-          {/* RIGHT COLUMN: Searchable visualization of patients + integrated case tracking / follow-up */}
+          {/* RIGHT COLUMN: Detail view or list */}
           <div className={`space-y-4 ${activeView === "list" ? "block w-full animate-fade-in" : "hidden"}`}>
+
+          {/* ── Detail view ── */}
+          {selectedNNId && (() => {
+            const selected = nnAdmissions.find(a => a.id === selectedNNId);
+            return selected ? (
+              <NNDetail
+                admission={selected}
+                onBack={() => setSelectedNNId(null)}
+              />
+            ) : null;
+          })()}
+
+          {/* ── List view ── */}
+          <div className={selectedNNId ? "hidden" : "space-y-4"}>
 
             {/* Action toolbelt (Search and launchers) */}
             <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
@@ -541,8 +553,6 @@ export default function App() {
                 </div>
               ) : (
                 filteredAdmissions.map((ad) => {
-                  const isExpanded = expandedNNId === ad.id;
-
                   // Query matches linked to this specific NN admission
                   const nnMatches = matches.filter(m => m.nnId === ad.id);
                   const activeMatch = nnMatches.find(m => m.status === 'Pending' || m.status === 'Validating' || m.status === 'Confirmed');
@@ -592,13 +602,6 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* Collapsing arrow */}
-                        <button
-                          onClick={() => setExpandedNNId(isExpanded ? null : ad.id)}
-                          className="bg-slate-50 hover:bg-slate-100 p-1.5 rounded-lg border border-slate-200 text-slate-500 cursor-pointer transition-colors"
-                        >
-                          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                        </button>
                       </div>
 
                       {/* Brief preview description always shown */}
@@ -650,14 +653,15 @@ export default function App() {
                         </div>
 
                         {/* Bottom action bar */}
-                        <div className="mt-4 flex items-center justify-between">
+                        <div className="mt-4 flex items-center justify-between gap-3">
                           <button
-                            onClick={() => setExpandedNNId(isExpanded ? null : ad.id)}
-                            className="text-xs font-bold text-slate-800 hover:text-slate-950 flex items-center gap-1.5 focus:outline-none"
+                            onClick={() => setSelectedNNId(ad.id)}
+                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-[#991b1b] text-[10px] font-extrabold uppercase tracking-wider rounded-lg cursor-pointer transition-colors"
                           >
-                            <span>{isExpanded ? "Ocultar Seguimiento" : "Ver Seguimiento y Cruces de Datos"}</span>
+                            <FileText className="h-3.5 w-3.5" />
+                            <span>Ver Expediente Completo</span>
                             {nnMatches.length > 0 && (
-                              <span className="bg-slate-900 text-white font-mono text-[9px] font-bold px-1.5 py-0.2 rounded-full">
+                              <span className="bg-[#991b1b] text-white font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none">
                                 {nnMatches.length}
                               </span>
                             )}
@@ -665,160 +669,11 @@ export default function App() {
 
                           {ad.status === NNStatus.IDENTIFIED && (
                             <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-1">
-                              <CheckCircle2 className="h-3.5 w-3.5" /> Caso Homologado por Fiscalía
+                              <CheckCircle2 className="h-3.5 w-3.5" /> Caso Homologado
                             </span>
                           )}
                         </div>
                       </div>
-
-                      {/* EXPANDED PANEL: Integrated Tracking (Seguimiento, matches & direct validation action) */}
-                      {isExpanded && (
-                        <div className="bg-slate-50 border-t border-slate-150 p-5 space-y-4">
-                          <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                            <h5 className="text-[11px] font-bold tracking-wider text-slate-800 uppercase flex items-center gap-1.5">
-                              <Scale className="h-4 w-4 text-slate-700" />
-                              Expediente Judicial Integrado y Cruce de Personas
-                            </h5>
-                            <span className="text-[9px] font-mono font-bold bg-slate-200 text-slate-700 px-2 py-0.5 rounded">
-                              Caso ID: #{ad.id}
-                            </span>
-                          </div>
-
-                          {/* Render Matches or state if no match */}
-                          {nnMatches.length === 0 ? (
-                            <div className="bg-white p-4 rounded-xl border border-slate-200 text-center text-xs text-slate-500 italic flex flex-col items-center justify-center space-y-2">
-                              <Search className="h-5 w-5 text-slate-400" />
-                              <p>Sin coincidencias registradas en la base de datos nacional.</p>
-                            </div>
-                          ) : (
-                            <div className="space-y-4">
-                              {nnMatches.map((match) => {
-                                const mp = missingPersons.find(p => p.id === match.missingPersonId);
-                                if (!mp) return null;
-
-                                return (
-                                  <div key={match.id} className="bg-white rounded-xl border border-slate-200 p-4 space-y-4 shadow-sm">
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-2.5">
-                                      <div className="flex items-center gap-1.5">
-                                        <span className="text-xs font-bold text-slate-800">
-                                          Coincidencia Estimada:
-                                        </span>
-                                        <span className={`text-xs font-extrabold font-mono px-2 py-0.5 rounded-full ${match.confidence >= 85 ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
-                                          }`}>
-                                          {match.confidence}%
-                                        </span>
-                                      </div>
-
-                                      <span className={`text-[10px] tracking-wide uppercase font-bold text-slate-500`}>
-                                        Estado: <strong className={match.status === 'Confirmed' ? "text-green-700" : "text-amber-600"}>{match.status === 'Confirmed' ? "HOMOLOGADO" : match.status === 'Rejected' ? "DESCARTADO" : "PENDIENTE VERIFICACIÓN"}</strong>
-                                      </span>
-                                    </div>
-
-                                    {/* Main comparative workspace splitter */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-
-                                      {/* Missing person details reported by family */}
-                                      <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-150 space-y-3">
-                                        <div className="flex items-center gap-2">
-                                          <img
-                                            src={mp.photoUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face"}
-                                            alt={mp.fullName}
-                                            className="w-10 h-10 rounded-full object-cover border border-slate-300 shadow-inner"
-                                            referrerPolicy="no-referrer"
-                                          />
-                                          <div>
-                                            <h6 className="font-bold text-slate-900 leading-tight">{mp.fullName}</h6>
-                                            <p className="text-[10px] text-slate-500">Edad: {mp.age} años | Género: {mp.gender}</p>
-                                          </div>
-                                        </div>
-
-                                        <div className="space-y-1.5 text-[11px] text-slate-650">
-                                          <p className="flex items-center gap-1">
-                                            <MapPin className="h-3.5 w-3.5 inline text-slate-400" /> Visto en: <strong>{mp.placeOfDisappearance}</strong>
-                                          </p>
-                                          <p className="flex items-center gap-1">
-                                            <Calendar className="h-3.5 w-3.5 inline text-slate-400" /> Extravío: {mp.dateOfDisappearance}
-                                          </p>
-                                          <p className="p-1.5 bg-white border rounded border-slate-200 text-[10px] italic">
-                                            "<strong>Filiación reportada:</strong> {mp.distinctiveFeatures}"
-                                          </p>
-                                          <p className="text-[10px] text-slate-450">
-                                            Contacto: {mp.contactName} ({mp.contactPhone})
-                                          </p>
-                                        </div>
-                                      </div>
-
-                                      {/* AI Matching Reasonings & Real-time confirmation desk */}
-                                      <div className="space-y-3 flex flex-col justify-between">
-                                        <div>
-                                          <span className="text-[9px] uppercase font-bold text-slate-400 block tracking-wider mb-1">Fundamentos del Algoritmo</span>
-                                          <ul className="space-y-1 list-disc pl-4 text-[11px] text-slate-700 leading-normal">
-                                            {match.reasons.map((reason, idx) => (
-                                              <li key={idx} className="italic">"{reason}"</li>
-                                            ))}
-                                          </ul>
-                                        </div>
-
-                                        {/* Validation action panel */}
-                                        <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
-                                          {match.status === "Pending" ? (
-                                              <div className="space-y-2">
-                                                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide">
-                                                  Anotación Judicial / Notas de Homologación
-                                                </label>
-                                                <input
-                                                  type="text"
-                                                  placeholder="Ej: Se cotejó lunar y cicatriz. Coincidencia ratificada por familiar."
-                                                  value={validationNotes[match.id] || ""}
-                                                  onChange={(e) => setValidationNotes({
-                                                    ...validationNotes,
-                                                    [match.id]: e.target.value
-                                                  })}
-                                                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-[11px] focus:outline-none focus:ring-1 focus:ring-slate-900"
-                                                />
-
-                                                <div className="flex gap-2 text-[10px]">
-                                                  <button
-                                                    onClick={() => handleValidateMatchSubmit(match.id, "Confirmed")}
-                                                    className="flex-1 bg-green-700 hover:bg-green-750 text-white font-bold py-1.5 rounded-lg cursor-pointer transition uppercase"
-                                                  >
-                                                    ✓ Confirmar Identidad
-                                                  </button>
-                                                  <button
-                                                    onClick={() => handleValidateMatchSubmit(match.id, "Rejected")}
-                                                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-1.5 rounded-lg cursor-pointer transition border border-slate-250 uppercase"
-                                                  >
-                                                    ✗ Descartar Cruce
-                                                  </button>
-                                                </div>
-                                              </div>
-                                          ) : (
-                                            <div className={`p-2.5 rounded-xl text-[11px] border ${match.status === 'Confirmed'
-                                                ? "bg-green-50 border-green-200 text-green-800"
-                                                : "bg-red-50 border-red-200 text-red-800"
-                                              }`}>
-                                              <p className="font-bold uppercase tracking-wider text-[10px]">
-                                                {match.status === 'Confirmed' ? "✓ Caso Homologado - Identidad Verificada" : "✗ Incompatibilidad Decretada"}
-                                              </p>
-                                              <p className="mt-1 italic">"{match.validationNotes || "Copia certificada subida al servidor."}"</p>
-                                              <p className="mt-1.5 text-[9px] font-mono text-slate-400">
-                                                Validador: {match.validatedBy || "Fiscal Interviniente"} ({match.validationDate || "2026-06-02"})
-                                              </p>
-                                            </div>
-                                          )}
-                                        </div>
-
-                                      </div>
-
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-
-                        </div>
-                      )}
 
                     </div>
                   );
@@ -826,7 +681,9 @@ export default function App() {
               )}
             </div>
 
-          </div>
+          </div>{/* end list view */}
+
+          </div>{/* end right column */}
 
         </div>
 
@@ -888,7 +745,7 @@ export default function App() {
                     {al.nnId && (
                       <button
                         onClick={() => {
-                          setExpandedNNId(al.nnId || null);
+                          if (al.nnId) setSelectedNNId(al.nnId);
                           setShowAlertsDrawer(false);
                         }}
                         className="text-[9px] bg-slate-900 text-white font-bold py-1 px-2.5 rounded hover:bg-slate-800 cursor-pointer"

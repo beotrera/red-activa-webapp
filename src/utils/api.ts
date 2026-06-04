@@ -86,6 +86,20 @@ export async function createNNAdmission(data: CreateNNAdmissionPayload): Promise
   return normalizeId(body.data ?? body);
 }
 
+export async function updatePerson(
+  id: string,
+  data: Partial<Pick<NNAdmission, "status" | "estimatedAge" | "gender" | "height" | "weight" | "distinctiveFeatures" | "consciousnessLevel" | "notes" | "assignedTo">>
+): Promise<NNAdmission> {
+  const res = await fetch(`${API_BASE}/api/persons/${id}`, {
+    method: "PUT",
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Error updating person");
+  const body = await res.json();
+  return normalizeId(body.data ?? body);
+}
+
 export async function validateMatch(
   matchId: string,
   status: "Confirmed" | "Rejected",
