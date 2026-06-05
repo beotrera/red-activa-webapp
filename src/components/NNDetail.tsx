@@ -168,11 +168,11 @@ export default function NNDetail({ admission: initial, onBack }: NNDetailProps) 
           </div>
           <div>
             <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">Estatura</p>
-            <p className="text-sm font-bold text-slate-900">{admission.height}</p>
+            <p className="text-sm font-bold text-slate-900">{admission.height} m</p>
           </div>
           <div>
             <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">Peso Estimativo</p>
-            <p className="text-sm font-bold text-slate-900">{admission.weight}</p>
+            <p className="text-sm font-bold text-slate-900">{admission.weight} Kg</p>
           </div>
 
           <div className="col-span-2 sm:col-span-2 pt-4 border-t border-slate-100">

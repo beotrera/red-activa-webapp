@@ -42,7 +42,7 @@ export default function Header({ alerts, onAlertClick, onMarkAllRead, currentUse
                 <span className="text-slate-900 font-light tracking-wide">Activa</span>
               </h1>
             </div>
-            <p className="text-[10px] text-slate-400 tracking-wider font-semibold uppercase mt-0.5">
+            <p className="text-xs text-slate-400 tracking-wider font-semibold uppercase mt-0.5">
               Conectando Vidas en Tiempo Real
             </p>
           </div>
@@ -61,15 +61,15 @@ export default function Header({ alerts, onAlertClick, onMarkAllRead, currentUse
           {/* Active User Credentials Badge */}
           {currentUser && (
             <div className="flex items-center gap-3 pl-3 border-l border-slate-200">
-              <img 
-                src={currentUser.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&crop=face"} 
-                alt={currentUser.fullName} 
-                className="h-8.5 w-8.5 rounded-xl border border-slate-300 object-cover" 
+              <img
+                src={currentUser.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&crop=face"}
+                alt={currentUser.fullName}
+                className="h-10 w-10 rounded-xl border border-slate-300 object-cover"
                 referrerPolicy="no-referrer"
               />
-              <div className="hidden lg:block text-left text-xs">
-                <p className="font-extrabold text-slate-900 leading-none">{getDisplayName(currentUser)}</p>
-                <p className="text-[9px] text-[#991b1b] font-mono uppercase tracking-wider font-bold mt-0.5 max-w-[200px] truncate" title={currentUser.entity}>
+              <div className="hidden lg:block text-left">
+                <p className="text-sm font-extrabold text-slate-900 leading-none">{getDisplayName(currentUser)}</p>
+                <p className="text-xs text-[#991b1b] font-mono uppercase tracking-wider font-bold mt-1 max-w-[220px] truncate" title={currentUser.entity}>
                   {currentUser.role} • {currentUser.entity.split(" ")[0]}
                 </p>
               </div>

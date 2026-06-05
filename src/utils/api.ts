@@ -14,6 +14,12 @@ import { store } from "../store";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
+export function getImageUrl(path: string | undefined | null): string | undefined {
+  if (!path) return undefined;
+  if (path.startsWith("http")) return path;
+  return `${API_BASE}${path.startsWith("/") ? "" : "/"}${path}`;
+}
+
 export interface DashboardData {
   missingPersons: MissingPerson[];
   nnAdmissions: NNAdmission[];
@@ -126,7 +132,7 @@ export async function markAlertsAsRead(alertId: string): Promise<{ success: bool
 }
 
 export async function loginUser(email: string, password: string): Promise<RedActivaUser> {
-  const res = await fetch(`${API_BASE}/auth/login`, {
+  const res = await fetch(`${API_BASE}/api/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
