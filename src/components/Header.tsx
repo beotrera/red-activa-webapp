@@ -69,9 +69,6 @@ export default function Header({ alerts, onAlertClick, onMarkAllRead, currentUse
               />
               <div className="hidden lg:block text-left">
                 <p className="text-sm font-extrabold text-slate-900 leading-none">{getDisplayName(currentUser)}</p>
-                <p className="text-xs text-[#991b1b] font-mono uppercase tracking-wider font-bold mt-1 max-w-[220px] truncate" title={currentUser.entity}>
-                  {currentUser.role} • {currentUser.entity.split(" ")[0]}
-                </p>
               </div>
               <button 
                 onClick={onLogout}
