@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { NNAdmission, NNGender, ConsciousnessLevel, NNStatus } from "../types";
 import { useUpdatePerson } from "../hooks/useApi";
+import { getImageUrl } from "../utils/api";
+import { useAppSelector } from "../hooks/useAppDispatch";
 
 // ─── Display maps ────────────────────────────────────────────────────────────
 
@@ -58,6 +60,9 @@ export default function NNDetail({ admission: initial, onBack }: NNDetailProps) 
   const [statusOpen, setStatusOpen] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
 
+  const currentUser = useAppSelector((state) => state.auth.user);
+  const canChangeStatus = currentUser?.entity === "MANAGEMENT";
+
   const updateMutation = useUpdatePerson();
 
   const handleStatusChange = (status: NNStatus) => {
@@ -82,34 +87,46 @@ export default function NNDetail({ admission: initial, onBack }: NNDetailProps) 
         </button>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Status dropdown */}
+          {/* Status dropdown (Management only) */}
           <div className="relative">
-            <button
-              onClick={() => setStatusOpen((o) => !o)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-[10px] font-extrabold uppercase tracking-wider cursor-pointer transition ${statusCfg.color}`}
-            >
-              <span className="text-[9px] text-slate-500 font-semibold normal-case tracking-normal mr-0.5">
-                ESTADO NN:
-              </span>
-              <span className={`inline-block w-2 h-2 rounded-full ${statusCfg.dot}`} />
-              {statusCfg.label}
-              <ChevronDown className="h-3 w-3 ml-0.5" />
-            </button>
+            {canChangeStatus ? (
+              <>
+                <button
+                  onClick={() => setStatusOpen((o) => !o)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-[10px] font-extrabold uppercase tracking-wider cursor-pointer transition ${statusCfg.color}`}
+                >
+                  <span className="text-[9px] text-slate-500 font-semibold normal-case tracking-normal mr-0.5">
+                    ESTADO NN:
+                  </span>
+                  <span className={`inline-block w-2 h-2 rounded-full ${statusCfg.dot}`} />
+                  {statusCfg.label}
+                  <ChevronDown className="h-3 w-3 ml-0.5" />
+                </button>
 
-            {statusOpen && (
-              <div className="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-lg z-20 overflow-hidden">
-                {Object.entries(STATUS_CONFIG).map(([val, cfg]) => (
-                  <button
-                    key={val}
-                    onClick={() => handleStatusChange(val as NNStatus)}
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-[10px] font-bold uppercase tracking-wider hover:bg-slate-50 cursor-pointer transition ${cfg.color} bg-transparent border-0`}
-                  >
-                    <span className={`w-2 h-2 rounded-full shrink-0 ${cfg.dot}`} />
-                    {cfg.label}
-                    {val === admission.status && <CheckCircle2 className="h-3 w-3 ml-auto" />}
-                  </button>
-                ))}
-              </div>
+                {statusOpen && (
+                  <div className="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-lg z-20 overflow-hidden">
+                    {Object.entries(STATUS_CONFIG).map(([val, cfg]) => (
+                      <button
+                        key={val}
+                        onClick={() => handleStatusChange(val as NNStatus)}
+                        className={`w-full flex items-center gap-2 px-3 py-2 text-[10px] font-bold uppercase tracking-wider hover:bg-slate-50 cursor-pointer transition ${cfg.color} bg-transparent border-0`}
+                      >
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${cfg.dot}`} />
+                        {cfg.label}
+                        {val === admission.status && <CheckCircle2 className="h-3 w-3 ml-auto" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-[10px] font-extrabold uppercase tracking-wider ${statusCfg.color}`}>
+                <span className="text-[9px] text-slate-500 font-semibold normal-case tracking-normal mr-0.5">
+                  ESTADO NN:
+                </span>
+                <span className={`inline-block w-2 h-2 rounded-full ${statusCfg.dot}`} />
+                {statusCfg.label}
+              </span>
             )}
           </div>
 
@@ -226,12 +243,12 @@ export default function NNDetail({ admission: initial, onBack }: NNDetailProps) 
               <button
                 key={idx}
                 type="button"
-                onClick={() => setLightbox(photo.url)}
+                onClick={() => setLightbox(getImageUrl(photo.url) ?? photo.url)}
                 className="group text-left border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm hover:border-[#991b1b]/50 hover:shadow-md transition cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#991b1b]"
               >
                 <div className="aspect-square overflow-hidden bg-slate-50">
                   <img
-                    src={photo.url}
+                    src={getImageUrl(photo.url)}
                     alt="Evidencia"
                     className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                     referrerPolicy="no-referrer"

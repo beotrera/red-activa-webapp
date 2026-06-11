@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Activity, Bell, Shield, Radio, Wifi, Clock, LogOut, KeyRound } from "lucide-react";
 import { SystemAlert, RedActivaUser } from "../types";
 import { getDisplayName } from "../utils/userPrefix";
@@ -13,6 +14,7 @@ interface HeaderProps {
 
 export default function Header({ alerts, onAlertClick, onMarkAllRead, currentUser, onLogout }: HeaderProps) {
   const [time, setTime] = useState(new Date());
+  const navigate = useNavigate();
   const unreadCount = alerts.filter(a => !a.read).length;
 
   useEffect(() => {
@@ -26,7 +28,7 @@ export default function Header({ alerts, onAlertClick, onMarkAllRead, currentUse
       <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
         
         {/* Branding */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
           <div className="bg-gradient-to-br from-[#991b1b] to-[#7f1d1d] text-white p-2 md:p-2.5 rounded-xl shadow-md border-b-2 border-red-950 relative overflow-hidden">
             {/* Pulsating Emergency Pulse */}
             <span className="absolute top-1 right-1 flex h-2 w-2">

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { NNStatus } from "../types";
 import { usePersons } from "../hooks/useApi";
+import { getImageUrl } from "../utils/api";
 import PulseLoader from "../components/PulseLoader";
 import { Search, PlusCircle, Hospital, MapPin, FileText, CheckCircle2, Camera, X } from "lucide-react";
 
@@ -146,17 +147,17 @@ export default function NNListPage() {
                       <span className="text-xs text-[#991b1b] font-bold block uppercase tracking-wider">
                         Galería de Evidencia (Tatuajes / Marcas)
                       </span>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {ad.identifyingPhotos.map((photo, pIdx) => (
+                      <div className="flex flex-wrap gap-1.5">
+                        {ad.identifyingPhotos.slice(0, 2).map((photo, pIdx) => (
                           <button
                             type="button"
                             key={pIdx}
                             onClick={() => setLightboxPhoto(photo)}
-                            className="group border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#991b1b] cursor-pointer transition hover:border-[#991b1b]/50"
+                            className="group border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#991b1b] cursor-pointer transition hover:border-[#991b1b]/50 w-fit"
                           >
-                            <div className="aspect-square relative w-full overflow-hidden bg-slate-50">
+                            <div className="relative w-50 h-50 overflow-hidden bg-slate-50">
                               <img
-                                src={photo.url}
+                                src={getImageUrl(photo.url)}
                                 alt="Evidencia"
                                 className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                                 referrerPolicy="no-referrer"
@@ -169,6 +170,20 @@ export default function NNListPage() {
                             </div>
                           </button>
                         ))}
+                        {ad.identifyingPhotos.length > 2 && (
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/nn/${ad.id}`)}
+                            className="w-50 h-50 rounded-xl border-2 border-dashed border-slate-200 hover:border-[#991b1b]/40 bg-slate-50 hover:bg-red-50/30 flex flex-col items-center justify-center gap-1 transition cursor-pointer group"
+                          >
+                            <span className="text-xl font-black text-slate-400 group-hover:text-[#991b1b] transition">
+                              +{ad.identifyingPhotos.length - 2}
+                            </span>
+                            <span className="text-xs font-semibold text-slate-400 group-hover:text-[#991b1b] transition">
+                              Ver todas
+                            </span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}
@@ -236,7 +251,7 @@ export default function NNListPage() {
             </div>
             <div className="aspect-square w-full bg-slate-50 flex items-center justify-center border-b border-slate-100">
               <img
-                src={lightboxPhoto.url}
+                src={getImageUrl(lightboxPhoto.url)}
                 alt="Evidencia médica"
                 className="max-h-full max-w-full object-contain"
                 referrerPolicy="no-referrer"

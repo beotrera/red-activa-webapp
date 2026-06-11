@@ -21,6 +21,58 @@ export default function NNAdmissionPage() {
   const [photos, setPhotos] = useState<File[]>([]);
   const [dragActive, setDragActive] = useState(false);
 
+  const handleIntChange = (setter: (v: string) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setter(e.target.value.replace(/[^0-9]/g, ""));
+  };
+
+  const handleDecimalChange = (setter: (v: string) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value.replace(/[^0-9.]/g, "");
+    // Allow only one decimal point
+    const parts = val.split(".");
+    if (parts.length > 2) val = `${parts[0]}.${parts.slice(1).join("")}`;
+    setter(val);
+  };
+
+  const handleHeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value.replace(/[^0-9.]/g, "");
+
+    // Auto-insert decimal after first digit when 3+ digits without dot: "175" → "1.75"
+    if (/^\d{3,}$/.test(val)) {
+      val = `${val[0]}.${val.slice(1, 3)}`;
+    }
+
+    // Cap at 2 decimal places
+    const dotIdx = val.indexOf(".");
+    if (dotIdx !== -1 && val.length - dotIdx - 1 > 2) {
+      val = val.slice(0, dotIdx + 3);
+    }
+
+    // Only enforce max once the value has a decimal (is in final format)
+    if (val.includes(".")) {
+      const num = parseFloat(val);
+      if (!isNaN(num) && num > 3.0) return;
+    }
+
+    setHeight(val);
+  };
+
+  const handleHeightBlur = () => {
+    if (!height) return;
+    let val = height;
+
+    // "17" → "1.70", "2" → "2.00"
+    if (/^\d+$/.test(val)) {
+      val = `${val[0]}.${val.slice(1).padEnd(2, "0")}`;
+    }
+
+    const num = parseFloat(val);
+    if (isNaN(num)) { setHeight(""); return; }
+    if (num < 1.0) { setHeight("1.00"); return; }
+    if (num > 3.0) { setHeight("3.00"); return; }
+
+    setHeight(num.toFixed(2));
+  };
+
   const resetForm = () => {
     setAge("");
     setGender(NNGender.MALE);
@@ -113,10 +165,11 @@ export default function NNAdmissionPage() {
             <div>
               <label className="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Edad Est. *</label>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
                 placeholder="Ej: 42"
                 value={age}
-                onChange={(e) => setAge(e.target.value)}
+                onChange={handleIntChange(setAge)}
                 className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:outline-none"
                 required
               />
@@ -138,26 +191,23 @@ export default function NNAdmissionPage() {
             <div>
               <label className="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Estatura aprox. (m)</label>
               <input
-                type="number"
+                type="text"
+                inputMode="decimal"
                 placeholder="Ej: 1.75"
-                min="0"
-                max="3"
-                step="0.01"
                 value={height}
-                onChange={(e) => setHeight(e.target.value)}
+                onChange={handleHeightChange}
+                onBlur={handleHeightBlur}
                 className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-900"
               />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Peso aprox. (Kg)</label>
               <input
-                type="number"
+                type="text"
+                inputMode="decimal"
                 placeholder="Ej: 80"
-                min="0"
-                max="500"
-                step="0.5"
                 value={weight}
-                onChange={(e) => setWeight(e.target.value)}
+                onChange={handleDecimalChange(setWeight)}
                 className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-900"
               />
             </div>
