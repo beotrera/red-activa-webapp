@@ -14,12 +14,11 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-// ─── Nominatim geocoding ──────────────────────────────────────────────────────
+// ─── Nominatim geocoding (fallback when no coordinates are provided) ──────────
 
 interface GeoResult {
   lat: number;
   lon: number;
-  displayName: string;
 }
 
 async function geocode(query: string): Promise<GeoResult | null> {
@@ -35,11 +34,7 @@ async function geocode(query: string): Promise<GeoResult | null> {
     );
     const data = await res.json();
     if (!data.length) return null;
-    return {
-      lat: parseFloat(data[0].lat),
-      lon: parseFloat(data[0].lon),
-      displayName: data[0].display_name,
-    };
+    return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
   } catch {
     return null;
   }
@@ -48,16 +43,25 @@ async function geocode(query: string): Promise<GeoResult | null> {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface LocationMapProps {
-  location: string;
+  address: string;
+  /** [longitude, latitude], GeoJSON order — pass when available to skip geocoding */
+  coordinates?: [number, number];
 }
 
-export default function LocationMap({ location }: LocationMapProps) {
-  const [coords, setCoords] = useState<GeoResult | null>(null);
-  const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
+export default function LocationMap({ address, coordinates }: LocationMapProps) {
+  const [coords, setCoords] = useState<GeoResult | null>(
+    coordinates ? { lat: coordinates[1], lon: coordinates[0] } : null
+  );
+  const [status, setStatus] = useState<"loading" | "ok" | "error">(coordinates ? "ok" : "loading");
 
   useEffect(() => {
+    if (coordinates) {
+      setCoords({ lat: coordinates[1], lon: coordinates[0] });
+      setStatus("ok");
+      return;
+    }
     setStatus("loading");
-    geocode(location).then((result) => {
+    geocode(address).then((result) => {
       if (result) {
         setCoords(result);
         setStatus("ok");
@@ -65,7 +69,7 @@ export default function LocationMap({ location }: LocationMapProps) {
         setStatus("error");
       }
     });
-  }, [location]);
+  }, [address, coordinates?.[0], coordinates?.[1]]);
 
   return (
     <div className="space-y-3">
@@ -76,8 +80,8 @@ export default function LocationMap({ location }: LocationMapProps) {
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
         {/* Address bar */}
         <div className="px-4 py-2.5 border-b border-slate-100 flex items-center gap-2">
-          <span className="text-[10px] font-semibold text-slate-500">Centro:</span>
-          <span className="text-[11px] font-bold text-slate-800">{location}</span>
+          <span className="text-[10px] font-semibold text-slate-500">Dirección:</span>
+          <span className="text-[11px] font-bold text-slate-800">{address}</span>
         </div>
 
         {/* Map area */}
@@ -91,7 +95,7 @@ export default function LocationMap({ location }: LocationMapProps) {
           {status === "error" && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 gap-2">
               <span className="text-slate-300 text-3xl">🗺️</span>
-              <span className="text-xs text-slate-400">No se pudo geolocalizar "{location}"</span>
+              <span className="text-xs text-slate-400">No se pudo geolocalizar "{address}"</span>
             </div>
           )}
 
@@ -108,7 +112,7 @@ export default function LocationMap({ location }: LocationMapProps) {
               />
               <Marker position={[coords.lat, coords.lon]}>
                 <Popup>
-                  <span className="text-xs font-semibold">{location}</span>
+                  <span className="text-xs font-semibold">{address}</span>
                 </Popup>
               </Marker>
             </MapContainer>

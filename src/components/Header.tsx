@@ -1,21 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Activity, Bell, Shield, Radio, Wifi, Clock, LogOut, KeyRound } from "lucide-react";
-import { SystemAlert, RedActivaUser } from "../types";
+import { Activity, Clock, LogOut } from "lucide-react";
+import { RedActivaUser } from "../types";
 import { getDisplayName } from "../utils/userPrefix";
 
 interface HeaderProps {
-  alerts: SystemAlert[];
-  onAlertClick: () => void;
-  onMarkAllRead: () => void;
   currentUser: RedActivaUser | null;
   onLogout: () => void;
 }
 
-export default function Header({ alerts, onAlertClick, onMarkAllRead, currentUser, onLogout }: HeaderProps) {
+export default function Header({ currentUser, onLogout }: HeaderProps) {
   const [time, setTime] = useState(new Date());
   const navigate = useNavigate();
-  const unreadCount = alerts.filter(a => !a.read).length;
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);

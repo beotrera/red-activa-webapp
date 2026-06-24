@@ -8,17 +8,19 @@ import {
   FileText,
   ChevronDown,
   CheckCircle2,
+  Sparkles,
+  AlertTriangle,
 } from "lucide-react";
-import { NNAdmission, NNGender, ConsciousnessLevel, NNStatus } from "../types";
-import { useUpdatePerson } from "../hooks/useApi";
+import { NNAdmission, Gender, ConsciousnessLevel, NNStatus, UserRole, Institution } from "../types";
+import { useUpdatePerson, useSimilarities } from "../hooks/useApi";
 import { getImageUrl } from "../utils/api";
 import { useAppSelector } from "../hooks/useAppDispatch";
 
 // ─── Display maps ────────────────────────────────────────────────────────────
 
-const GENDER_LABEL: Record<NNGender, string> = {
-  [NNGender.MALE]: "Masculino",
-  [NNGender.FEMALE]: "Femenino",
+const GENDER_LABEL: Record<Gender, string> = {
+  [Gender.MALE]: "Masculino",
+  [Gender.FEMALE]: "Femenino",
 };
 
 const CONSCIOUSNESS_LABEL: Record<ConsciousnessLevel, string> = {
@@ -46,6 +48,11 @@ const STATUS_CONFIG: Record<NNStatus, { label: string; color: string; dot: strin
   },
 };
 
+function institutionName(institution: Institution | string | undefined): string | undefined {
+  if (!institution) return undefined;
+  return typeof institution === "string" ? undefined : institution.name;
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface NNDetailProps {
@@ -61,9 +68,10 @@ export default function NNDetail({ admission: initial, onBack }: NNDetailProps) 
   const [lightbox, setLightbox] = useState<string | null>(null);
 
   const currentUser = useAppSelector((state) => state.auth.user);
-  const canChangeStatus = currentUser?.entity === "MANAGEMENT";
+  const canChangeStatus = currentUser?.role === UserRole.ADMINISTRATOR;
 
   const updateMutation = useUpdatePerson();
+  const { data: similarities = [], isLoading: loadingSimilarities } = useSimilarities(admission.id);
 
   const handleStatusChange = (status: NNStatus) => {
     setStatusOpen(false);
@@ -72,6 +80,7 @@ export default function NNDetail({ admission: initial, onBack }: NNDetailProps) 
   };
 
   const statusCfg = STATUS_CONFIG[admission.status];
+  const instName = institutionName(admission.institution);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -87,7 +96,7 @@ export default function NNDetail({ admission: initial, onBack }: NNDetailProps) 
         </button>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Status dropdown (Management only) */}
+          {/* Status dropdown (Administrator only) */}
           <div className="relative">
             {canChangeStatus ? (
               <>
@@ -153,16 +162,21 @@ export default function NNDetail({ admission: initial, onBack }: NNDetailProps) 
       <div className="space-y-1">
         <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
           <Hospital className="h-5 w-5 text-slate-500 shrink-0" />
-          Paciente NN de aprox. {admission.estimatedAge} años ({GENDER_LABEL[admission.gender]})
+          Paciente NN de aprox. {admission.estimatedAgeMin}–{admission.estimatedAgeMax} años ({GENDER_LABEL[admission.gender]})
         </h2>
         <p className="text-sm font-semibold text-[#991b1b] flex items-center gap-1">
           <MapPin className="h-3.5 w-3.5 shrink-0" />
-          {admission.location}
+          {admission.address} {admission.neighborhood && `— ${admission.neighborhood}`}
         </p>
         <p className="text-xs text-slate-400 leading-relaxed">
           Ingreso reportado el{" "}
-          <strong className="text-slate-600">{admission.dateOfAdmission}</strong> por{" "}
+          <strong className="text-slate-600">{new Date(admission.dateOfAdmission).toLocaleString()}</strong> por{" "}
           <span className="text-slate-600">{admission.reportedBy}</span>
+          {instName && (
+            <>
+              {" "}en <strong className="text-slate-800">{instName}</strong>
+            </>
+          )}
           {admission.assignedTo && (
             <>
               . Asignado pericialmente a{" "}
@@ -177,7 +191,7 @@ export default function NNDetail({ admission: initial, onBack }: NNDetailProps) 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-5">
           <div>
             <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">Edad Estimada</p>
-            <p className="text-sm font-bold text-slate-900">{admission.estimatedAge} años</p>
+            <p className="text-sm font-bold text-slate-900">{admission.estimatedAgeMin}–{admission.estimatedAgeMax} años</p>
           </div>
           <div>
             <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">Género Físico</p>
@@ -185,11 +199,11 @@ export default function NNDetail({ admission: initial, onBack }: NNDetailProps) 
           </div>
           <div>
             <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">Estatura</p>
-            <p className="text-sm font-bold text-slate-900">{admission.height} m</p>
+            <p className="text-sm font-bold text-slate-900">{admission.height != null ? `${admission.height} m` : "No especificada"}</p>
           </div>
           <div>
             <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">Peso Estimativo</p>
-            <p className="text-sm font-bold text-slate-900">{admission.weight} Kg</p>
+            <p className="text-sm font-bold text-slate-900">{admission.weight != null ? `${admission.weight} kg` : "No especificado"}</p>
           </div>
 
           <div className="col-span-2 sm:col-span-2 pt-4 border-t border-slate-100">
@@ -217,17 +231,6 @@ export default function NNDetail({ admission: initial, onBack }: NNDetailProps) 
             "{admission.distinctiveFeatures}"
           </p>
         </div>
-
-        {admission.notes && (
-          <div className="space-y-1">
-            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
-              Notas Clínicas o de Guardia Complementarias
-            </p>
-            <div className="bg-white border border-slate-200 rounded-xl p-4">
-              <p className="text-sm text-slate-600 leading-relaxed">{admission.notes}</p>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ── Photo gallery ── */}
@@ -249,14 +252,21 @@ export default function NNDetail({ admission: initial, onBack }: NNDetailProps) 
                 <div className="aspect-square overflow-hidden bg-slate-50">
                   <img
                     src={getImageUrl(photo.url)}
-                    alt="Evidencia"
+                    alt={photo.caption || "Evidencia"}
                     className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                     referrerPolicy="no-referrer"
                   />
                 </div>
-                {photo.uploadedAt && (
-                  <div className="p-2 text-[9px] text-slate-400 font-mono">
-                    {new Date(photo.uploadedAt).toLocaleString()}
+                {(photo.caption || photo.uploadedAt) && (
+                  <div className="p-2 space-y-0.5">
+                    {photo.caption && (
+                      <p className="text-[10px] text-slate-600 leading-snug line-clamp-2">{photo.caption}</p>
+                    )}
+                    {photo.uploadedAt && (
+                      <p className="text-[9px] text-slate-400 font-mono">
+                        {new Date(photo.uploadedAt).toLocaleString()}
+                      </p>
+                    )}
                   </div>
                 )}
               </button>
@@ -265,8 +275,80 @@ export default function NNDetail({ admission: initial, onBack }: NNDetailProps) 
         </div>
       )}
 
+      {/* ── Similarities (AI matching against citizen reports) ── */}
+      <div className="space-y-3">
+        <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-slate-700 flex items-center gap-2 pb-2 border-b border-slate-200">
+          <Sparkles className="h-4 w-4 text-amber-500" />
+          Posibles Coincidencias con Denuncias Ciudadanas
+        </h3>
+
+        {loadingSimilarities ? (
+          <div className="bg-white border border-slate-200 rounded-xl p-6 text-center text-xs text-slate-400 italic">
+            Buscando coincidencias...
+          </div>
+        ) : similarities.length === 0 ? (
+          <div className="bg-white border border-dashed border-slate-200 rounded-xl p-6 text-center text-xs text-slate-400 italic flex flex-col items-center gap-1.5">
+            <AlertTriangle className="h-4 w-4 text-slate-300" />
+            Aún no se detectaron coincidencias. El motor de cotejo corre en segundo plano — esta sección se actualiza automáticamente.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {similarities.map((sim) => (
+              <div key={sim._id} className="bg-white border border-slate-200 rounded-xl p-4 space-y-3 shadow-sm">
+                <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-100">
+                  <h4 className="text-sm font-bold text-slate-900">{sim.report.fullName}</h4>
+                  <span
+                    className={`text-xs font-extrabold font-mono px-2 py-0.5 rounded-full ${
+                      sim.score >= 85 ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
+                    }`}
+                  >
+                    {sim.score}% de coincidencia
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-600">
+                  <p><strong className="text-slate-800">Barrio:</strong> {sim.report.neighborhood}</p>
+                  {sim.report.estimatedAge != null && (
+                    <p><strong className="text-slate-800">Edad:</strong> {sim.report.estimatedAge} años</p>
+                  )}
+                  {sim.report.gender && (
+                    <p><strong className="text-slate-800">Género:</strong> {GENDER_LABEL[sim.report.gender]}</p>
+                  )}
+                  {sim.report.lastSeenDate && (
+                    <p><strong className="text-slate-800">Visto por última vez:</strong> {new Date(sim.report.lastSeenDate).toLocaleDateString()}</p>
+                  )}
+                </div>
+
+                <p className="text-xs text-slate-600 italic bg-slate-50 border border-slate-150 rounded-lg p-2.5">
+                  "{sim.report.description}"
+                </p>
+
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">Justificación de la IA</p>
+                  <p className="text-xs text-slate-700 leading-relaxed">{sim.reasoning}</p>
+                </div>
+
+                {sim.differences.length > 0 && (
+                  <div>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-amber-600 mb-1">Diferencias Detectadas</p>
+                    <ul className="list-disc pl-4 text-xs text-amber-700 space-y-0.5">
+                      {sim.differences.map((diff, i) => (
+                        <li key={i}>{diff}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* ── Map ── */}
-      <LocationMap location={admission.location} />
+      <LocationMap
+        address={admission.address}
+        coordinates={admission.geoLocation?.coordinates}
+      />
 
       {/* ── Lightbox ── */}
       {lightbox && (

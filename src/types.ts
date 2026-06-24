@@ -1,3 +1,5 @@
+// ─── Shared enums (match backend contract exactly) ────────────────────────────
+
 export enum UserRole {
   DOCTOR = 'DOCTOR',
   NURSE = 'NURSE',
@@ -7,39 +9,6 @@ export enum UserRole {
 }
 
 export enum Gender {
-  MALE = 'MALE',
-  FEMALE = 'FEMALE',
-}
-
-export interface RedActivaUser {
-  id: string;
-  email: string;
-  fullName: string;
-  role: UserRole;
-  gender?: Gender;
-  entity: string;
-  avatarUrl?: string;
-  token?: string;
-}
-
-export interface MissingPerson {
-  id: string;
-  fullName: string;
-  age: number;
-  gender: 'Masculino' | 'Femenino' | 'Otro';
-  height: string; // e.g. "1.75m"
-  weight: string; // e.g. "75kg"
-  distinctiveFeatures: string; // Tattoos, scars, mole, clothing at departure
-  dateOfDisappearance: string; // YYYY-MM-DD
-  placeOfDisappearance: string; // e.g. "Barrio Belgrano, Buenos Aires"
-  contactName: string;
-  contactPhone: string;
-  status: 'Searching' | 'Found' | 'Resolved';
-  photoUrl?: string;
-  notes?: string;
-}
-
-export enum NNGender {
   MALE = 'MALE',
   FEMALE = 'FEMALE',
 }
@@ -57,48 +26,129 @@ export enum NNStatus {
   IDENTIFIED = 'IDENTIFIED',
 }
 
+export enum InstitutionType {
+  HOSPITAL = 'HOSPITAL',
+  CLINIC = 'CLINIC',
+  SANATORIUM = 'SANATORIUM',
+  MANAGEMENT = 'MANAGEMENT',
+}
+
+// ─── Auth ──────────────────────────────────────────────────────────────────────
+
+export interface RedActivaUser {
+  id: string;
+  email: string;
+  fullName: string;
+  role: UserRole;
+  gender?: Gender;
+  entity: string; // institution name
+  avatarUrl?: string;
+  token?: string;
+}
+
+// ─── Institutions ──────────────────────────────────────────────────────────────
+
+export interface GeoPoint {
+  type: 'Point';
+  coordinates: [number, number]; // [longitude, latitude]
+}
+
+export interface Institution {
+  _id: string;
+  name: string;
+  type: InstitutionType;
+  address: string;
+  phone?: string;
+  neighborhood: string;
+  location: GeoPoint;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// ─── Persons (NN) ───────────────────────────────────────────────────────────────
+
 export interface IdentifyingPhoto {
   url: string;
+  caption?: string;
   uploadedAt: string;
 }
 
+export interface PersonCreatedBy {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
+// Frontend-facing shape of a Person/NN record, normalized (_id → id).
 export interface NNAdmission {
   id: string;
-  estimatedAge: number;
-  gender: NNGender;
-  height: string;
-  weight: string;
+  estimatedAgeMin: number;
+  estimatedAgeMax: number;
+  gender: Gender;
+  height?: number;
+  weight?: number;
   distinctiveFeatures: string;
   consciousnessLevel: ConsciousnessLevel;
-  location: string;
+  address: string;
+  neighborhood: string;
+  geoLocation?: GeoPoint;
+  institution?: Institution | string;
   dateOfAdmission: string;
   status: NNStatus;
   reportedBy: string;
   assignedTo?: string;
-  notes?: string;
   identifyingPhotos?: IdentifyingPhoto[];
+  createdBy?: PersonCreatedBy | string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-export interface MatchResult {
-  id: string;
-  nnId: string;
-  missingPersonId: string;
-  confidence: number; // 0 - 100
-  reasons: string[];
-  status: 'Pending' | 'Validating' | 'Confirmed' | 'Rejected';
-  validatedBy?: string;
-  validationDate?: string;
-  validationNotes?: string;
+// ─── Reports (citizen missing-person reports — read only) ─────────────────────
+
+export interface Report {
+  _id: string;
+  fullName: string;
+  description: string;
+  picture: string;
+  neighborhood: string;
+  lastSeenDate?: string;
+  gender?: Gender;
+  estimatedAge?: number;
+  height?: number;
+  weight?: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface SystemAlert {
-  id: string;
-  type: 'match_alert' | 'system';
-  title: string;
-  message: string;
-  timestamp: string;
-  matchId?: string;
-  nnId?: string;
-  missingPersonId?: string;
-  read: boolean;
+// ─── Similarities (AI matching results) ────────────────────────────────────────
+
+export interface PersonSimilarity {
+  _id: string;
+  person: string;
+  report: {
+    _id: string;
+    fullName: string;
+    description: string;
+    neighborhood: string;
+    gender?: Gender;
+    estimatedAge?: number;
+    lastSeenDate?: string;
+  };
+  score: number; // 1-100
+  differences: string[];
+  reasoning: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── API envelope ───────────────────────────────────────────────────────────────
+
+export interface ApiResponse<T> {
+  result: boolean;
+  data: T | null;
+  errorCode: number | null;
+  message: string | null;
+  showMessage: { EN: string; ES: string } | null;
+  needUpdate: boolean;
 }

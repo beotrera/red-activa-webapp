@@ -1,12 +1,12 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { usePersons } from "../hooks/useApi";
+import { usePerson } from "../hooks/useApi";
 import NNDetail from "../components/NNDetail";
 import PulseLoader from "../components/PulseLoader";
 
 export default function NNDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: admissions = [], isLoading } = usePersons(true);
+  const { data: admission, isLoading, isError } = usePerson(id);
 
   if (isLoading) {
     return (
@@ -17,9 +17,7 @@ export default function NNDetailPage() {
     );
   }
 
-  const admission = admissions.find((a) => a.id === id);
-
-  if (!admission) {
+  if (isError || !admission) {
     return (
       <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 text-center text-slate-400 text-sm italic">
         No se encontró el expediente solicitado.

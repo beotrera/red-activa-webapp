@@ -1,12 +1,17 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { NNStatus } from "../types";
+import { NNStatus, Gender } from "../types";
 import { usePersons } from "../hooks/useApi";
 import { getImageUrl } from "../utils/api";
 import PulseLoader from "../components/PulseLoader";
 import { Search, PlusCircle, Hospital, MapPin, FileText, CheckCircle2, Camera, X } from "lucide-react";
 
-type LightboxPhoto = { url: string; uploadedAt?: string };
+const GENDER_LABEL: Record<Gender, string> = {
+  [Gender.MALE]: "Masculino",
+  [Gender.FEMALE]: "Femenino",
+};
+
+type LightboxPhoto = { url: string; caption?: string; uploadedAt?: string };
 
 export default function NNListPage() {
   const navigate = useNavigate();
@@ -17,7 +22,7 @@ export default function NNListPage() {
   const [lightboxPhoto, setLightboxPhoto] = useState<LightboxPhoto | null>(null);
 
   const filtered = admissions.filter((ad) => {
-    const searchString = `${ad.location} ${ad.distinctiveFeatures} ${ad.estimatedAge} ${ad.gender} ${ad.reportedBy}`.toLowerCase();
+    const searchString = `${ad.address} ${ad.neighborhood} ${ad.distinctiveFeatures} ${ad.estimatedAgeMin}-${ad.estimatedAgeMax} ${ad.gender} ${ad.reportedBy}`.toLowerCase();
     const matchesSearch = searchString.includes(searchTerm.toLowerCase());
     if (statusFilter === "all") return matchesSearch;
     return ad.status === statusFilter && matchesSearch;
@@ -59,7 +64,7 @@ export default function NNListPage() {
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Filtrar por hospital, marcas corporales, rasgos particulares..."
+              placeholder="Filtrar por hospital, barrio, marcas corporales, rasgos particulares..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9 pr-4 py-2.5 w-full bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-1 focus:ring-slate-900 focus:outline-none"
@@ -112,7 +117,7 @@ export default function NNListPage() {
                 <div className="space-y-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <h4 className="text-sm font-bold text-slate-950">
-                      NN de aprox. {ad.estimatedAge} años ({ad.gender})
+                      NN de aprox. {ad.estimatedAgeMin}–{ad.estimatedAgeMax} años ({GENDER_LABEL[ad.gender]})
                     </h4>
                     <span
                       className={`text-xs font-bold px-2 py-0.5 rounded ${
@@ -127,10 +132,11 @@ export default function NNListPage() {
                     </span>
                   </div>
                   <p className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-                    <MapPin className="h-4 w-4 text-slate-400 shrink-0" /> {ad.location}
+                    <MapPin className="h-4 w-4 text-slate-400 shrink-0" />
+                    {ad.address} {ad.neighborhood && `— ${ad.neighborhood}`}
                   </p>
                   <p className="text-xs text-slate-400">
-                    Ingreso reportado: {ad.dateOfAdmission} por {ad.reportedBy}
+                    Ingreso reportado: {new Date(ad.dateOfAdmission).toLocaleString()} por {ad.reportedBy}
                   </p>
                 </div>
               </div>
@@ -190,8 +196,8 @@ export default function NNListPage() {
 
                   <div className="mt-3 flex flex-wrap gap-4 items-center text-sm text-slate-500 pt-3 border-t border-slate-200/55">
                     <span>Conciencia: <strong className="text-slate-700">{ad.consciousnessLevel}</strong></span>
-                    <span>Estatura: <strong className="text-slate-700">{ad.height} m</strong></span>
-                    <span>Peso: <strong className="text-slate-700">{ad.weight} Kg</strong></span>
+                    {ad.height != null && <span>Estatura: <strong className="text-slate-700">{ad.height} m</strong></span>}
+                    {ad.weight != null && <span>Peso: <strong className="text-slate-700">{ad.weight} kg</strong></span>}
                     {ad.assignedTo && (
                       <span>
                         Designado a:{" "}
@@ -200,7 +206,6 @@ export default function NNListPage() {
                         </strong>
                       </span>
                     )}
-                    {ad.notes && <span>Notas: <strong className="text-slate-700 italic">{ad.notes}</strong></span>}
                   </div>
                 </div>
 

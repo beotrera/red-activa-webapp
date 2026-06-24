@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { NNGender, ConsciousnessLevel } from "../types";
+import { Gender, ConsciousnessLevel } from "../types";
 import { useCreateNNAdmission } from "../hooks/useApi";
 import { toast } from "sonner";
 import { Hospital, Camera, Image, X, ArrowLeft } from "lucide-react";
@@ -11,13 +11,13 @@ export default function NNAdmissionPage() {
   const createNNMutation = useCreateNNAdmission();
 
   const [submitting, setSubmitting] = useState(false);
-  const [age, setAge] = useState("");
-  const [gender, setGender] = useState<NNGender>(NNGender.MALE);
+  const [ageMin, setAgeMin] = useState("");
+  const [ageMax, setAgeMax] = useState("");
+  const [gender, setGender] = useState<Gender>(Gender.MALE);
   const [height, setHeight] = useState("");
   const [weight, setWeight] = useState("");
   const [distinctiveFeatures, setDistinctiveFeatures] = useState("");
   const [consciousness, setConsciousness] = useState<ConsciousnessLevel>(ConsciousnessLevel.DISORIENTED);
-  const [notes, setNotes] = useState("");
   const [photos, setPhotos] = useState<File[]>([]);
   const [dragActive, setDragActive] = useState(false);
 
@@ -50,7 +50,7 @@ export default function NNAdmissionPage() {
     // Only enforce max once the value has a decimal (is in final format)
     if (val.includes(".")) {
       const num = parseFloat(val);
-      if (!isNaN(num) && num > 3.0) return;
+      if (!isNaN(num) && num > 2.5) return;
     }
 
     setHeight(val);
@@ -67,28 +67,33 @@ export default function NNAdmissionPage() {
 
     const num = parseFloat(val);
     if (isNaN(num)) { setHeight(""); return; }
-    if (num < 1.0) { setHeight("1.00"); return; }
-    if (num > 3.0) { setHeight("3.00"); return; }
+    if (num < 0.3) { setHeight("0.30"); return; }
+    if (num > 2.5) { setHeight("2.50"); return; }
 
     setHeight(num.toFixed(2));
   };
 
   const resetForm = () => {
-    setAge("");
-    setGender(NNGender.MALE);
+    setAgeMin("");
+    setAgeMax("");
+    setGender(Gender.MALE);
     setHeight("");
     setWeight("");
     setDistinctiveFeatures("");
     setConsciousness(ConsciousnessLevel.DISORIENTED);
-    setNotes("");
     setPhotos([]);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!age || !distinctiveFeatures) {
+    if (!ageMin || !ageMax || !distinctiveFeatures) {
       toast.error("Por favor complete los campos obligatorios (*)");
+      return;
+    }
+
+    if (Number(ageMin) > Number(ageMax)) {
+      toast.error("La edad mínima no puede ser mayor a la máxima");
       return;
     }
 
@@ -98,13 +103,13 @@ export default function NNAdmissionPage() {
 
     createNNMutation.mutate(
       {
-        estimatedAge: Number(age),
+        estimatedAgeMin: Number(ageMin),
+        estimatedAgeMax: Number(ageMax),
         gender,
-        height: height || "0",
-        weight: weight || "0",
+        height: height ? Number(height) : undefined,
+        weight: weight ? Number(weight) : undefined,
         distinctiveFeatures,
         consciousnessLevel: consciousness,
-        notes: notes || undefined,
         images: photos.length > 0 ? photos : undefined,
       },
       {
@@ -161,15 +166,27 @@ export default function NNAdmissionPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 text-sm">
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-3 gap-2.5">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Edad Est. *</label>
+              <label className="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Edad Mín. *</label>
               <input
                 type="text"
                 inputMode="numeric"
-                placeholder="Ej: 42"
-                value={age}
-                onChange={handleIntChange(setAge)}
+                placeholder="Ej: 35"
+                value={ageMin}
+                onChange={handleIntChange(setAgeMin)}
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:outline-none"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Edad Máx. *</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="Ej: 45"
+                value={ageMax}
+                onChange={handleIntChange(setAgeMax)}
                 className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:outline-none"
                 required
               />
@@ -178,11 +195,11 @@ export default function NNAdmissionPage() {
               <label className="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Género *</label>
               <select
                 value={gender}
-                onChange={(e) => setGender(e.target.value as NNGender)}
+                onChange={(e) => setGender(e.target.value as Gender)}
                 className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 focus:outline-none"
               >
-                <option value={NNGender.MALE}>Masculino</option>
-                <option value={NNGender.FEMALE}>Femenino</option>
+                <option value={Gender.MALE}>Masculino</option>
+                <option value={Gender.FEMALE}>Femenino</option>
               </select>
             </div>
           </div>
@@ -201,7 +218,7 @@ export default function NNAdmissionPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Peso aprox. (Kg)</label>
+              <label className="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Peso aprox. (kg)</label>
               <input
                 type="text"
                 inputMode="decimal"
@@ -295,17 +312,6 @@ export default function NNAdmissionPage() {
                 />
               </label>
             </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Notas Clínicas Adicionales</label>
-            <textarea
-              rows={2}
-              placeholder="Notas médicas o psiquiátricas complementarias..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-900"
-            />
           </div>
 
           <button
