@@ -28,7 +28,7 @@ export default function App() {
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans select-none antialiased">
       <Header currentUser={currentUser} onLogout={handleLogout} />
 
-      <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 flex-grow flex flex-col gap-6">
+      <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 grow flex flex-col gap-6">
         <Routes>
           <Route path="/" element={<NNListPage />} />
           <Route path="/admision" element={<NNAdmissionPage />} />

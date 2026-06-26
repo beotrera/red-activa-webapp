@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Activity, Clock, LogOut } from "lucide-react";
 import { RedActivaUser } from "../types";
@@ -19,69 +19,76 @@ export default function Header({ currentUser, onLogout }: HeaderProps) {
   }, []);
 
   return (
-    <header className="bg-white text-slate-900 border-b border-slate-200 shadow-sm relative z-40">
-      <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+    <header className="bg-white border-b border-slate-200 shadow-sm relative z-40">
 
-        {/* Branding */}
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
-          <div className="bg-linear-to-br from-[#991b1b] to-[#7f1d1d] text-white p-2 md:p-2.5 rounded-xl shadow-md border-b-2 border-red-950 relative overflow-hidden">
-            <span className="absolute top-1 right-1 flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-            </span>
-            <Activity className="h-5.5 w-5.5 text-white" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-950 font-sans">
-                <span className="text-[#991b1b]">Red</span>
-                <span className="text-slate-900 font-light tracking-wide">Activa</span>
-              </h1>
-            </div>
-            <p className="text-xs text-slate-400 tracking-wider font-semibold uppercase mt-0.5">
-              Conectando Vidas en Tiempo Real
-            </p>
-          </div>
-        </div>
+      {/* ── Top accent bar ── */}
+      <div className="h-1 bg-[#991b1b]" />
 
-        {/* Right side */}
-        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-14">
 
-          {/* Live clock + date */}
-          <div className="bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs font-mono text-slate-600">
-            <Clock className="h-3.5 w-3.5 text-slate-400" />
-            <span>{time.toLocaleTimeString()}</span>
-            <span className="hidden md:inline text-slate-400">
-              | {time.toLocaleDateString("es-AR", { year: "numeric", month: "2-digit", day: "2-digit" })}
-            </span>
-          </div>
-
-          {/* User badge */}
-          {currentUser && (
-            <div className="flex items-center gap-2 pl-3 border-l border-slate-200">
-              <img
-                src={currentUser.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&crop=face"}
-                alt={currentUser.fullName}
-                className="h-10 w-10 rounded-xl border border-slate-300 object-cover"
-                referrerPolicy="no-referrer"
-              />
-              {/* First name on small screens, full display name on large */}
-              <span className="sm:hidden text-xs font-semibold text-slate-700">
-                {currentUser.fullName.split(" ")[0]}
+          {/* Branding */}
+          <button
+            onClick={() => navigate("/")}
+            className="flex items-center gap-3 cursor-pointer group"
+          >
+            <div className="bg-[#991b1b] text-white p-1.5 rounded-lg border-b-2 border-red-950 relative overflow-hidden shrink-0">
+              <span className="absolute top-0.5 right-0.5 flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-300"></span>
               </span>
-              <div className="hidden lg:block text-left">
-                <p className="text-sm font-bold text-slate-900 leading-none">{getDisplayName(currentUser)}</p>
-              </div>
-              <button
-                onClick={onLogout}
-                className="p-2 text-slate-400 hover:text-[#991b1b] hover:bg-red-50 rounded-lg cursor-pointer transition duration-150"
-                title="Cerrar sesión institucional"
-              >
-                <LogOut className="h-4 w-4" />
-              </button>
+              <Activity className="h-4 w-4 text-white" />
             </div>
-          )}
+            <div className="hidden sm:block">
+              <span className="text-lg font-bold text-slate-900 tracking-tight">
+                Red<span className="text-[#991b1b]">Activa</span>
+              </span>
+              <span className="block text-[9px] text-slate-400 uppercase tracking-widest font-semibold leading-none">
+                Sistema Federal · Personas NN
+              </span>
+            </div>
+            <span className="sm:hidden text-lg font-bold text-slate-900">
+              Red<span className="text-[#991b1b]">Activa</span>
+            </span>
+          </button>
 
+          {/* Right section */}
+          <div className="flex items-center gap-3">
+
+            {/* Clock */}
+            <div className="hidden sm:flex items-center gap-1.5 text-xs font-mono text-slate-500 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg">
+              <Clock className="h-3 w-3 text-slate-400" />
+              <span>{time.toLocaleTimeString("es-AR")}</span>
+              <span className="text-slate-300 mx-0.5">·</span>
+              <span>{time.toLocaleDateString("es-AR")}</span>
+            </div>
+
+            {/* User */}
+            {currentUser && (
+              <div className="flex items-center gap-2.5 pl-3 border-l border-slate-200">
+                <img
+                  src={currentUser.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&crop=face"}
+                  alt={currentUser.fullName}
+                  className="h-8 w-8 rounded-lg border border-slate-300 object-cover shrink-0"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="hidden md:block text-left">
+                  <p className="text-xs font-bold text-slate-900 leading-tight">{getDisplayName(currentUser)}</p>
+                </div>
+                <span className="sm:hidden text-xs font-semibold text-slate-700">
+                  {currentUser.fullName.split(" ")[0]}
+                </span>
+                <button
+                  onClick={onLogout}
+                  title="Cerrar sesión"
+                  className="p-1.5 text-slate-400 hover:text-[#991b1b] hover:bg-red-50 rounded-lg cursor-pointer transition-colors"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+
+          </div>
         </div>
       </div>
     </header>
