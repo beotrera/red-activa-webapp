@@ -4,7 +4,7 @@ import { NNStatus, Gender } from "../types";
 import { usePersons } from "../hooks/useApi";
 import { getImageUrl } from "../utils/api";
 import PulseLoader from "../components/PulseLoader";
-import { Search, PlusCircle, Hospital, ChevronRight, Camera, X, ArrowLeft } from "lucide-react";
+import { Search, PlusCircle, Hospital, ChevronRight, Camera, X } from "lucide-react";
 
 const GENDER_LABEL: Record<Gender, string> = {
   [Gender.MALE]: "Masc.",
@@ -66,15 +66,6 @@ export default function NNListPage() {
 
   return (
     <div className="space-y-4">
-
-      {/* ── Back ── */}
-      <button
-        onClick={() => navigate("/")}
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-lg transition cursor-pointer"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" />
-        Volver al Panel
-      </button>
 
       {/* ── Main container ── */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">

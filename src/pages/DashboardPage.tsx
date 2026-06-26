@@ -5,12 +5,11 @@ import L from "leaflet";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
-import { Users, FileText, MapPin, ChevronRight } from "lucide-react";
+import { Users, FileText, MapPin, ChevronRight, AlertTriangle } from "lucide-react";
 import { useNeighborhoodStats } from "../hooks/useApi";
 import PulseLoader from "../components/PulseLoader";
-import type { LucideIcon } from "lucide-react";
+import type { NeighborhoodStat } from "../types";
 
-// Fix Leaflet default icon paths broken by Vite asset handling
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconUrl: markerIcon,
@@ -20,19 +19,32 @@ L.Icon.Default.mergeOptions({
 
 const CABA_CENTER: [number, number] = [-34.6037, -58.3816];
 
+function neighborhoodIcon(nn: number): L.DivIcon {
+  const bg = nn >= 3 ? "#991b1b" : nn >= 1 ? "#d97706" : "#94a3b8";
+  const label = nn > 0 ? String(nn) : "·";
+  return L.divIcon({
+    className: "",
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+    popupAnchor: [0, -20],
+    html: `<div style="width:34px;height:34px;background:${bg};border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:800;border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.28);">${label}</div>`,
+  });
+}
+
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { data: neighborhoods = [], isLoading } = useNeighborhoodStats();
 
-  const { totalNN, totalReports } = useMemo(
-    () => ({
-      totalNN: neighborhoods.reduce((s, n) => s + n.nn, 0),
-      totalReports: neighborhoods.reduce((s, n) => s + n.reports, 0),
-    }),
-    [neighborhoods]
-  );
+  const { totalNN, totalReports, activeBarrios, withCoincidencias } = useMemo(() => ({
+    totalNN: neighborhoods.reduce((s, n) => s + n.nn, 0),
+    totalReports: neighborhoods.reduce((s, n) => s + n.reports, 0),
+    activeBarrios: neighborhoods.filter((n) => n.nn > 0).length,
+    withCoincidencias: neighborhoods.filter((n) => n.nn > 0 && n.reports > 0).length,
+  }), [neighborhoods]);
 
   const mappable = neighborhoods.filter((n) => n.coordinates != null);
+  const maxNN = Math.max(...neighborhoods.map((n) => n.nn), 1);
+  const maxReports = Math.max(...neighborhoods.map((n) => n.reports), 1);
 
   if (isLoading) {
     return (
@@ -44,196 +56,248 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
 
-      {/* ── Totals ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <StatCard
-          Icon={Users}
-          label="Total NNA registrados"
+      {/* ── KPI row ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <KpiCard
           value={totalNN}
-          color="text-[#991b1b]"
-          bg="bg-red-50"
+          label="NNA registrados"
+          sublabel="Personas no identificadas"
+          color="red"
+          Icon={Users}
+          onClick={() => navigate("/nn")}
+          clickLabel="Ver expedientes"
         />
-        <StatCard
-          Icon={FileText}
-          label="Total reportes ciudadanos"
+        <KpiCard
           value={totalReports}
-          color="text-amber-700"
-          bg="bg-amber-50"
+          label="Reportes ciudadanos"
+          sublabel="Personas desaparecidas"
+          color="amber"
+          Icon={FileText}
         />
-        <StatCard
+        <KpiCard
+          value={activeBarrios}
+          label="Barrios con NNA"
+          sublabel={`de ${neighborhoods.length} relevados`}
+          color="slate"
           Icon={MapPin}
-          label="Barrios relevados"
-          value={neighborhoods.length}
-          color="text-slate-600"
-          bg="bg-slate-100"
+        />
+        <KpiCard
+          value={withCoincidencias}
+          label="Cruces activos"
+          sublabel="Barrios con NNA y reportes"
+          color="orange"
+          Icon={AlertTriangle}
         />
       </div>
 
-      {/* ── Map ── */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
-              Distribución geográfica
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Personas NN y reportes por barrio · CABA
-            </p>
-          </div>
-          <button
-            onClick={() => navigate("/nn")}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold bg-slate-900 text-white px-3 py-1.5 rounded-lg hover:bg-slate-700 transition-colors cursor-pointer shrink-0"
-          >
-            Ver expedientes
-            <ChevronRight className="h-3.5 w-3.5" />
-          </button>
-        </div>
+      {/* ── Map + Table side by side ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
-        {neighborhoods.length === 0 ? (
-          <div className="h-96 flex items-center justify-center">
-            <p className="text-sm text-slate-400">No hay datos por barrio disponibles.</p>
+        {/* Map */}
+        <div className="lg:col-span-3 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
+          <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between shrink-0">
+            <div>
+              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                Distribución geográfica
+              </h2>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Círculo = NNA activos · color por urgencia
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="hidden sm:flex items-center gap-3 text-[10px] text-slate-500">
+                <span className="flex items-center gap-1">
+                  <span className="w-3 h-3 rounded-full bg-[#991b1b] inline-block" /> ≥3 NNA
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-3 h-3 rounded-full bg-amber-500 inline-block" /> 1–2 NNA
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-3 h-3 rounded-full bg-slate-400 inline-block" /> Solo reportes
+                </span>
+              </div>
+            </div>
           </div>
-        ) : (
-          <div className="h-96">
-            <MapContainer
-              center={CABA_CENTER}
-              zoom={11}
-              scrollWheelZoom
-              className="h-full w-full"
-            >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              {mappable.map((n) => (
-                <Marker
-                  key={n.neighborhood}
-                  position={[n.coordinates![1], n.coordinates![0]]}
-                >
-                  <Popup>
-                    <div className="text-xs space-y-1 min-w-[120px]">
-                      <p className="font-bold text-slate-900">{n.neighborhood}</p>
-                      {n.comuna != null && (
-                        <p className="text-slate-500">Comuna {n.comuna}</p>
-                      )}
-                      <p>
-                        NNA:{" "}
-                        <strong className="text-[#991b1b]">{n.nn}</strong>
-                      </p>
-                      <p>
-                        Reportes:{" "}
-                        <strong className="text-amber-700">{n.reports}</strong>
-                      </p>
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
-            </MapContainer>
-          </div>
-        )}
-      </div>
 
-      {/* ── Neighborhood table ── */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100">
-          <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
-            Resumen por barrio
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Ordenado por actividad descendente
-          </p>
-        </div>
-
-        {neighborhoods.length === 0 ? (
-          <div className="px-5 py-10 text-center">
-            <p className="text-sm text-slate-400">No hay datos por barrio disponibles.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50">
-                  <th className="text-left px-5 py-3 font-semibold text-slate-500 uppercase tracking-wide">
-                    Barrio
-                  </th>
-                  <th className="text-center px-4 py-3 font-semibold text-slate-500 uppercase tracking-wide">
-                    Comuna
-                  </th>
-                  <th className="text-right px-4 py-3 font-semibold text-slate-500 uppercase tracking-wide">
-                    NNA
-                  </th>
-                  <th className="text-right px-5 py-3 font-semibold text-slate-500 uppercase tracking-wide">
-                    Reportes
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {neighborhoods.map((n, i) => (
-                  <tr
+          {neighborhoods.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center min-h-95">
+              <p className="text-sm text-slate-400">No hay datos disponibles.</p>
+            </div>
+          ) : (
+            <div className="flex-1 min-h-95">
+              <MapContainer
+                center={CABA_CENTER}
+                zoom={12}
+                scrollWheelZoom
+                className="h-full w-full min-h-95"
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                {mappable.map((n) => (
+                  <Marker
                     key={n.neighborhood}
-                    className={`border-b border-slate-100 last:border-0 ${
-                      i % 2 === 1 ? "bg-slate-50/50" : ""
-                    }`}
+                    position={[n.coordinates![1], n.coordinates![0]]}
+                    icon={neighborhoodIcon(n.nn)}
                   >
-                    <td className="px-5 py-3 font-medium text-slate-800">
-                      {n.neighborhood}
-                    </td>
-                    <td className="px-4 py-3 text-center text-slate-500">
-                      {n.comuna ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <span
-                        className={`font-bold ${
-                          n.nn > 0 ? "text-[#991b1b]" : "text-slate-400"
-                        }`}
-                      >
-                        {n.nn}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      <span
-                        className={`font-bold ${
-                          n.reports > 0 ? "text-amber-700" : "text-slate-400"
-                        }`}
-                      >
-                        {n.reports}
-                      </span>
-                    </td>
-                  </tr>
+                    <Popup>
+                      <div className="text-xs space-y-1.5 min-w-32.5">
+                        <p className="font-bold text-slate-900 text-sm">{n.neighborhood}</p>
+                        {n.comuna != null && (
+                          <p className="text-slate-400 text-[11px]">Comuna {n.comuna}</p>
+                        )}
+                        <div className="flex gap-4 pt-1 border-t border-slate-100">
+                          <span>
+                            NNA: <strong className="text-[#991b1b]">{n.nn}</strong>
+                          </span>
+                          <span>
+                            Reportes: <strong className="text-amber-700">{n.reports}</strong>
+                          </span>
+                        </div>
+                      </div>
+                    </Popup>
+                  </Marker>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+              </MapContainer>
+            </div>
+          )}
+        </div>
 
+        {/* Table */}
+        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
+          <div className="px-5 py-3.5 border-b border-slate-100 shrink-0 flex items-center justify-between">
+            <div>
+              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                Actividad por barrio
+              </h2>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Ordenado por NNA activos
+              </p>
+            </div>
+            <button
+              onClick={() => navigate("/nn")}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
+            >
+              Ver todos
+              <ChevronRight className="h-3 w-3" />
+            </button>
+          </div>
+
+          {neighborhoods.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center px-5 py-10">
+              <p className="text-sm text-slate-400 text-center">No hay datos disponibles.</p>
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+              {neighborhoods.map((n) => (
+                <NeighborhoodRow key={n.neighborhood} n={n} maxNN={maxNN} maxReports={maxReports} />
+              ))}
+            </div>
+          )}
+        </div>
+
+      </div>
     </div>
   );
 }
 
-interface StatCardProps {
-  Icon: LucideIcon;
-  label: string;
+// ── KPI Card ─────────────────────────────────────────────────────────────────
+
+const COLOR_MAP = {
+  red:    { num: "text-[#991b1b]", bg: "bg-red-50",    border: "border-red-100",    icon: "text-[#991b1b]" },
+  amber:  { num: "text-amber-700", bg: "bg-amber-50",  border: "border-amber-100",  icon: "text-amber-600" },
+  slate:  { num: "text-slate-700", bg: "bg-slate-100", border: "border-slate-200",  icon: "text-slate-500" },
+  orange: { num: "text-orange-700",bg: "bg-orange-50", border: "border-orange-100", icon: "text-orange-500" },
+};
+
+interface KpiCardProps {
   value: number;
-  color: string;
-  bg: string;
+  label: string;
+  sublabel: string;
+  color: keyof typeof COLOR_MAP;
+  Icon: React.ComponentType<{ className?: string }>;
+  onClick?: () => void;
+  clickLabel?: string;
 }
 
-function StatCard({ Icon, label, value, color, bg }: StatCardProps) {
+function KpiCard({ value, label, sublabel, color, Icon, onClick, clickLabel }: KpiCardProps) {
+  const c = COLOR_MAP[color];
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex items-center gap-4">
-      <div className={`${bg} ${color} p-3 rounded-xl shrink-0`}>
-        <Icon className="h-5 w-5" />
+    <div
+      onClick={onClick}
+      className={`bg-white border ${c.border} rounded-xl p-4 shadow-sm flex flex-col gap-3 ${onClick ? "cursor-pointer hover:shadow-md transition-shadow group" : ""}`}
+    >
+      <div className="flex items-start justify-between">
+        <div className={`${c.bg} ${c.icon} p-2 rounded-lg`}>
+          <Icon className="h-4 w-4" />
+        </div>
+        {onClick && (
+          <ChevronRight className="h-3.5 w-3.5 text-slate-300 group-hover:text-slate-500 transition-colors mt-0.5" />
+        )}
       </div>
-      <div className="min-w-0">
-        <p className="text-2xl font-extrabold text-slate-900 leading-none">
+      <div>
+        <p className={`text-3xl font-extrabold ${c.num} leading-none`}>
           {value.toLocaleString("es-AR")}
         </p>
-        <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide mt-1 leading-tight">
-          {label}
-        </p>
+        <p className="text-xs font-semibold text-slate-700 mt-1.5 leading-tight">{label}</p>
+        <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">{sublabel}</p>
+      </div>
+      {onClick && clickLabel && (
+        <p className={`text-[11px] font-semibold ${c.icon} group-hover:underline`}>{clickLabel} →</p>
+      )}
+    </div>
+  );
+}
+
+// ── Neighborhood row ──────────────────────────────────────────────────────────
+
+function NeighborhoodRow({
+  n,
+  maxNN,
+  maxReports,
+}: {
+  n: NeighborhoodStat;
+  maxNN: number;
+  maxReports: number;
+}) {
+  return (
+    <div className="px-5 py-3 space-y-2 hover:bg-slate-50 transition-colors">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-slate-800">{n.neighborhood}</span>
+        {n.comuna != null && (
+          <span className="text-[10px] text-slate-400 font-mono">C{n.comuna}</span>
+        )}
+      </div>
+
+      {/* NNA bar */}
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] text-slate-400 w-14 shrink-0">NNA</span>
+        <div className="flex-1 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+          <div
+            className="bg-[#991b1b] h-full rounded-full transition-all"
+            style={{ width: `${(n.nn / maxNN) * 100}%` }}
+          />
+        </div>
+        <span className={`text-[11px] font-bold w-4 text-right shrink-0 ${n.nn > 0 ? "text-[#991b1b]" : "text-slate-300"}`}>
+          {n.nn}
+        </span>
+      </div>
+
+      {/* Reports bar */}
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] text-slate-400 w-14 shrink-0">Reportes</span>
+        <div className="flex-1 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+          <div
+            className="bg-amber-400 h-full rounded-full transition-all"
+            style={{ width: `${(n.reports / maxReports) * 100}%` }}
+          />
+        </div>
+        <span className={`text-[11px] font-bold w-4 text-right shrink-0 ${n.reports > 0 ? "text-amber-600" : "text-slate-300"}`}>
+          {n.reports}
+        </span>
       </div>
     </div>
   );

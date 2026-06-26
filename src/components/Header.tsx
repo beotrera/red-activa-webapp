@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Activity, Clock, LogOut } from "lucide-react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { Activity, Clock, LogOut, LayoutDashboard, FolderOpen, UserPlus } from "lucide-react";
 import { RedActivaUser } from "../types";
 import { getDisplayName } from "../utils/userPrefix";
 
@@ -8,6 +8,12 @@ interface HeaderProps {
   currentUser: RedActivaUser | null;
   onLogout: () => void;
 }
+
+const NAV_ITEMS = [
+  { to: "/",        label: "Panel",       Icon: LayoutDashboard, end: true },
+  { to: "/nn",      label: "Expedientes", Icon: FolderOpen,      end: false },
+  { to: "/admision",label: "Admitir NN",  Icon: UserPlus,        end: false },
+];
 
 export default function Header({ currentUser, onLogout }: HeaderProps) {
   const [time, setTime] = useState(new Date());
@@ -20,17 +26,15 @@ export default function Header({ currentUser, onLogout }: HeaderProps) {
 
   return (
     <header className="bg-white border-b border-slate-200 shadow-sm relative z-40">
-
-      {/* ── Top accent bar ── */}
       <div className="h-1 bg-[#991b1b]" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-14">
+        <div className="flex items-center justify-between h-14 gap-6">
 
           {/* Branding */}
           <button
             onClick={() => navigate("/")}
-            className="flex items-center gap-3 cursor-pointer group"
+            className="flex items-center gap-3 cursor-pointer group shrink-0"
           >
             <div className="bg-[#991b1b] text-white p-1.5 rounded-lg border-b-2 border-red-950 relative overflow-hidden shrink-0">
               <span className="absolute top-0.5 right-0.5 flex h-1.5 w-1.5">
@@ -47,16 +51,38 @@ export default function Header({ currentUser, onLogout }: HeaderProps) {
                 Sistema Federal · Personas NN
               </span>
             </div>
-            <span className="sm:hidden text-lg font-bold text-slate-900">
-              Red<span className="text-[#991b1b]">Activa</span>
-            </span>
           </button>
 
+          {/* Nav links */}
+          <nav className="hidden md:flex items-center gap-1 flex-1">
+            {NAV_ITEMS.map(({ to, label, Icon, end }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                className={({ isActive }) =>
+                  `inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                    isActive
+                      ? "bg-slate-900 text-white"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+                  }`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <Icon className={`h-3.5 w-3.5 ${isActive ? "text-white" : "text-slate-400"}`} />
+                    {label}
+                  </>
+                )}
+              </NavLink>
+            ))}
+          </nav>
+
           {/* Right section */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 shrink-0">
 
             {/* Clock */}
-            <div className="hidden sm:flex items-center gap-1.5 text-xs font-mono text-slate-500 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg">
+            <div className="hidden lg:flex items-center gap-1.5 text-xs font-mono text-slate-500 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg">
               <Clock className="h-3 w-3 text-slate-400" />
               <span>{time.toLocaleTimeString("es-AR")}</span>
               <span className="text-slate-300 mx-0.5">·</span>
@@ -75,9 +101,6 @@ export default function Header({ currentUser, onLogout }: HeaderProps) {
                 <div className="hidden md:block text-left">
                   <p className="text-xs font-bold text-slate-900 leading-tight">{getDisplayName(currentUser)}</p>
                 </div>
-                <span className="sm:hidden text-xs font-semibold text-slate-700">
-                  {currentUser.fullName.split(" ")[0]}
-                </span>
                 <button
                   onClick={onLogout}
                   title="Cerrar sesión"
@@ -89,6 +112,31 @@ export default function Header({ currentUser, onLogout }: HeaderProps) {
             )}
 
           </div>
+        </div>
+
+        {/* Mobile nav */}
+        <div className="md:hidden flex items-center gap-1 pb-2.5 -mt-0.5">
+          {NAV_ITEMS.map(({ to, label, Icon, end }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({ isActive }) =>
+                `inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  isActive
+                    ? "bg-slate-900 text-white"
+                    : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <Icon className={`h-3.5 w-3.5 ${isActive ? "text-white" : "text-slate-400"}`} />
+                  {label}
+                </>
+              )}
+            </NavLink>
+          ))}
         </div>
       </div>
     </header>
