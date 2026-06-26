@@ -201,7 +201,9 @@ function NeighborhoodTable({
       {/* Rows */}
       {filtered.length === 0 ? (
         <div className="flex-1 flex items-center justify-center py-10">
-          <p className="text-xs text-slate-400">Sin resultados para "{search}"</p>
+          <p className="text-xs text-slate-400">
+            {search ? `Sin resultados para "${search}"` : "No hay datos disponibles."}
+          </p>
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
