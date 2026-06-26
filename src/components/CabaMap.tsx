@@ -59,9 +59,10 @@ interface TooltipState {
 
 interface CabaMapProps {
   neighborhoods: NeighborhoodStat[];
+  highlightNeighborhood?: string;
 }
 
-export default function CabaMap({ neighborhoods }: CabaMapProps) {
+export default function CabaMap({ neighborhoods, highlightNeighborhood }: CabaMapProps) {
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -94,19 +95,25 @@ export default function CabaMap({ neighborhoods }: CabaMapProps) {
         <rect width={W} height={H} fill="#e8eef5" />
 
         {/* Neighborhood polygons */}
-        {withPolygon.map((n) => (
-          <path
-            key={n.neighborhood}
-            d={toPath(n.polygon!)}
-            fill={nnFill(n.nn, n.reports)}
-            stroke={nnStroke(n.nn, n.reports)}
-            strokeWidth={nnStrokeWidth(n.nn, n.reports)}
-            strokeOpacity={0.8}
-            className="cursor-pointer transition-all duration-150"
-            onMouseEnter={(e) => handleEnter(e, n)}
-            onMouseLeave={() => setTooltip(null)}
-          />
-        ))}
+        {withPolygon.map((n) => {
+          const isHighlighted = highlightNeighborhood
+            ? n.neighborhood.toLowerCase() === highlightNeighborhood.toLowerCase()
+            : false;
+          return (
+            <path
+              key={n.neighborhood}
+              d={toPath(n.polygon!)}
+              fill={isHighlighted ? "rgba(153,27,27,0.25)" : highlightNeighborhood ? "#f8fafc" : nnFill(n.nn, n.reports)}
+              stroke={isHighlighted ? "#991b1b" : highlightNeighborhood ? "#cbd5e1" : nnStroke(n.nn, n.reports)}
+              strokeWidth={isHighlighted ? 2 : highlightNeighborhood ? 0.5 : nnStrokeWidth(n.nn, n.reports)}
+              strokeOpacity={isHighlighted ? 1 : highlightNeighborhood ? 0.6 : 0.8}
+              opacity={highlightNeighborhood && !isHighlighted ? 0.5 : 1}
+              className="cursor-pointer transition-all duration-150"
+              onMouseEnter={(e) => handleEnter(e, n)}
+              onMouseLeave={() => setTooltip(null)}
+            />
+          );
+        })}
 
         {/* Centroid markers for active neighborhoods */}
         {withCentroid

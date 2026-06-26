@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
-import { Activity, Clock, LogOut, LayoutDashboard, FolderOpen, UserPlus } from "lucide-react";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import { Activity, Clock, LayoutDashboard, FolderOpen, UserPlus } from "lucide-react";
 import { RedActivaUser } from "../types";
 import { getDisplayName } from "../utils/userPrefix";
+import ProfileModal from "./ProfileModal";
 
 interface HeaderProps {
   currentUser: RedActivaUser | null;
@@ -10,14 +11,21 @@ interface HeaderProps {
 }
 
 const NAV_ITEMS = [
-  { to: "/",        label: "Panel",       Icon: LayoutDashboard, end: true },
-  { to: "/nn",      label: "Expedientes", Icon: FolderOpen,      end: false },
-  { to: "/admision",label: "Admitir NN",  Icon: UserPlus,        end: false },
+  { to: "/",         label: "Panel",       Icon: LayoutDashboard, matchPrefix: null },
+  { to: "/nn",       label: "Expedientes", Icon: FolderOpen,      matchPrefix: "/nn" },
+  { to: "/admision", label: "Admitir NN",  Icon: UserPlus,        matchPrefix: "/admision" },
 ];
 
 export default function Header({ currentUser, onLogout }: HeaderProps) {
   const [time, setTime] = useState(new Date());
+  const [profileOpen, setProfileOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  function isActive(to: string, matchPrefix: string | null): boolean {
+    if (matchPrefix) return location.pathname.startsWith(matchPrefix);
+    return location.pathname === to;
+  }
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -25,6 +33,7 @@ export default function Header({ currentUser, onLogout }: HeaderProps) {
   }, []);
 
   return (
+  <>
     <header className="bg-white border-b border-slate-200 shadow-sm relative z-40">
       <div className="h-1 bg-[#991b1b]" />
 
@@ -55,27 +64,23 @@ export default function Header({ currentUser, onLogout }: HeaderProps) {
 
           {/* Nav links */}
           <nav className="hidden md:flex items-center gap-1 flex-1">
-            {NAV_ITEMS.map(({ to, label, Icon, end }) => (
-              <NavLink
-                key={to}
-                to={to}
-                end={end}
-                className={({ isActive }) =>
-                  `inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                    isActive
+            {NAV_ITEMS.map(({ to, label, Icon, matchPrefix }) => {
+              const active = isActive(to, matchPrefix);
+              return (
+                <NavLink
+                  key={to}
+                  to={to}
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                    active
                       ? "bg-slate-900 text-white"
                       : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
-                  }`
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    <Icon className={`h-3.5 w-3.5 ${isActive ? "text-white" : "text-slate-400"}`} />
-                    {label}
-                  </>
-                )}
-              </NavLink>
-            ))}
+                  }`}
+                >
+                  <Icon className={`h-3.5 w-3.5 ${active ? "text-white" : "text-slate-400"}`} />
+                  {label}
+                </NavLink>
+              );
+            })}
           </nav>
 
           {/* Right section */}
@@ -92,21 +97,19 @@ export default function Header({ currentUser, onLogout }: HeaderProps) {
             {/* User */}
             {currentUser && (
               <div className="flex items-center gap-2.5 pl-3 border-l border-slate-200">
-                <img
-                  src={currentUser.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&crop=face"}
-                  alt={currentUser.fullName}
-                  className="h-8 w-8 rounded-lg border border-slate-300 object-cover shrink-0"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="hidden md:block text-left">
-                  <p className="text-xs font-bold text-slate-900 leading-tight">{getDisplayName(currentUser)}</p>
-                </div>
                 <button
-                  onClick={onLogout}
-                  title="Cerrar sesión"
-                  className="p-1.5 text-slate-400 hover:text-[#991b1b] hover:bg-red-50 rounded-lg cursor-pointer transition-colors"
+                  onClick={() => setProfileOpen(true)}
+                  className="flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition-opacity"
                 >
-                  <LogOut className="h-3.5 w-3.5" />
+                  <img
+                    src={currentUser.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&crop=face"}
+                    alt={currentUser.fullName}
+                    className="h-8 w-8 rounded-lg border border-slate-300 object-cover shrink-0"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="hidden md:block text-left">
+                    <p className="text-xs font-bold text-slate-900 leading-tight">{getDisplayName(currentUser)}</p>
+                  </div>
                 </button>
               </div>
             )}
@@ -116,29 +119,34 @@ export default function Header({ currentUser, onLogout }: HeaderProps) {
 
         {/* Mobile nav */}
         <div className="md:hidden flex items-center gap-1 pb-2.5 -mt-0.5">
-          {NAV_ITEMS.map(({ to, label, Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                `inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                  isActive
+          {NAV_ITEMS.map(({ to, label, Icon, matchPrefix }) => {
+            const active = isActive(to, matchPrefix);
+            return (
+              <NavLink
+                key={to}
+                to={to}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  active
                     ? "bg-slate-900 text-white"
                     : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <Icon className={`h-3.5 w-3.5 ${isActive ? "text-white" : "text-slate-400"}`} />
-                  {label}
-                </>
-              )}
-            </NavLink>
-          ))}
+                }`}
+              >
+                <Icon className={`h-3.5 w-3.5 ${active ? "text-white" : "text-slate-400"}`} />
+                {label}
+              </NavLink>
+            );
+          })}
         </div>
       </div>
     </header>
+
+    {profileOpen && currentUser && (
+      <ProfileModal
+        user={currentUser}
+        onClose={() => setProfileOpen(false)}
+        onLogout={() => { setProfileOpen(false); onLogout(); }}
+      />
+    )}
+  </>
   );
 }
