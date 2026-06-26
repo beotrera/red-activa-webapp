@@ -1,35 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import L from "leaflet";
-import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
-import markerIcon from "leaflet/dist/images/marker-icon.png";
-import markerShadow from "leaflet/dist/images/marker-shadow.png";
-import { Users, FileText, MapPin, ChevronRight, AlertTriangle } from "lucide-react";
+import { Users, FileText, MapPin, ChevronRight, AlertTriangle, Search } from "lucide-react";
 import { useNeighborhoodStats } from "../hooks/useApi";
 import PulseLoader from "../components/PulseLoader";
+import CabaMap from "../components/CabaMap";
 import type { NeighborhoodStat } from "../types";
 
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconUrl: markerIcon,
-  iconRetinaUrl: markerIcon2x,
-  shadowUrl: markerShadow,
-});
-
-const CABA_CENTER: [number, number] = [-34.6037, -58.3816];
-
-function neighborhoodIcon(nn: number): L.DivIcon {
-  const bg = nn >= 3 ? "#991b1b" : nn >= 1 ? "#d97706" : "#94a3b8";
-  const label = nn > 0 ? String(nn) : "·";
-  return L.divIcon({
-    className: "",
-    iconSize: [34, 34],
-    iconAnchor: [17, 17],
-    popupAnchor: [0, -20],
-    html: `<div style="width:34px;height:34px;background:${bg};border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:800;border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.28);">${label}</div>`,
-  });
-}
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -42,7 +18,6 @@ export default function DashboardPage() {
     withCoincidencias: neighborhoods.filter((n) => n.nn > 0 && n.reports > 0).length,
   }), [neighborhoods]);
 
-  const mappable = neighborhoods.filter((n) => n.coordinates != null);
   const maxNN = Math.max(...neighborhoods.map((n) => n.nn), 1);
   const maxReports = Math.max(...neighborhoods.map((n) => n.reports), 1);
 
@@ -93,10 +68,10 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Map + Table side by side ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:h-135">
 
         {/* Map */}
-        <div className="lg:col-span-3 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
+        <div className="lg:col-span-3 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col h-full">
           <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between shrink-0">
             <div>
               <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
@@ -126,80 +101,115 @@ export default function DashboardPage() {
               <p className="text-sm text-slate-400">No hay datos disponibles.</p>
             </div>
           ) : (
-            <div className="flex-1 min-h-95">
-              <MapContainer
-                center={CABA_CENTER}
-                zoom={12}
-                scrollWheelZoom
-                className="h-full w-full min-h-95"
-              >
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                {mappable.map((n) => (
-                  <Marker
-                    key={n.neighborhood}
-                    position={[n.coordinates![1], n.coordinates![0]]}
-                    icon={neighborhoodIcon(n.nn)}
-                  >
-                    <Popup>
-                      <div className="text-xs space-y-1.5 min-w-32.5">
-                        <p className="font-bold text-slate-900 text-sm">{n.neighborhood}</p>
-                        {n.comuna != null && (
-                          <p className="text-slate-400 text-[11px]">Comuna {n.comuna}</p>
-                        )}
-                        <div className="flex gap-4 pt-1 border-t border-slate-100">
-                          <span>
-                            NNA: <strong className="text-[#991b1b]">{n.nn}</strong>
-                          </span>
-                          <span>
-                            Reportes: <strong className="text-amber-700">{n.reports}</strong>
-                          </span>
-                        </div>
-                      </div>
-                    </Popup>
-                  </Marker>
-                ))}
-              </MapContainer>
+            <div className="flex-1 min-h-0">
+              <CabaMap neighborhoods={neighborhoods} />
             </div>
           )}
         </div>
 
         {/* Table */}
-        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
-          <div className="px-5 py-3.5 border-b border-slate-100 shrink-0 flex items-center justify-between">
-            <div>
-              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
-                Actividad por barrio
-              </h2>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                Ordenado por NNA activos
-              </p>
-            </div>
-            <button
-              onClick={() => navigate("/nn")}
-              className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
-            >
-              Ver todos
-              <ChevronRight className="h-3 w-3" />
-            </button>
-          </div>
-
-          {neighborhoods.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center px-5 py-10">
-              <p className="text-sm text-slate-400 text-center">No hay datos disponibles.</p>
-            </div>
-          ) : (
-            <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
-              {neighborhoods.map((n) => (
-                <NeighborhoodRow key={n.neighborhood} n={n} maxNN={maxNN} maxReports={maxReports} />
-              ))}
-            </div>
-          )}
-        </div>
+        <NeighborhoodTable
+          neighborhoods={neighborhoods}
+          maxNN={maxNN}
+          maxReports={maxReports}
+          onVerTodos={() => navigate("/nn")}
+        />
 
       </div>
+    </div>
+  );
+}
+
+// ── Neighborhood Table ────────────────────────────────────────────────────────
+
+type SortOption = "activity" | "nn-desc" | "nn-asc" | "reports-desc" | "reports-asc" | "name-asc";
+
+function NeighborhoodTable({
+  neighborhoods,
+  maxNN,
+  maxReports,
+  onVerTodos,
+}: {
+  neighborhoods: NeighborhoodStat[];
+  maxNN: number;
+  maxReports: number;
+  onVerTodos: () => void;
+}) {
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<SortOption>("activity");
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    const list = q
+      ? neighborhoods.filter((n) => n.neighborhood.toLowerCase().includes(q))
+      : [...neighborhoods];
+
+    return list.sort((a, b) => {
+      switch (sort) {
+        case "nn-desc":    return b.nn - a.nn;
+        case "nn-asc":     return a.nn - b.nn;
+        case "reports-desc": return b.reports - a.reports;
+        case "reports-asc":  return a.reports - b.reports;
+        case "name-asc":   return a.neighborhood.localeCompare(b.neighborhood);
+        default:           return (b.nn + b.reports) - (a.nn + a.reports);
+      }
+    });
+  }, [neighborhoods, search, sort]);
+
+  return (
+    <div className="lg:col-span-2 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col h-full">
+
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-slate-100 shrink-0 flex items-center justify-between gap-2">
+        <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wide shrink-0">
+          Por barrio
+        </h2>
+        <button
+          onClick={onVerTodos}
+          className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-slate-900 transition-colors cursor-pointer shrink-0"
+        >
+          Ver todos <ChevronRight className="h-3 w-3" />
+        </button>
+      </div>
+
+      {/* Search + sort */}
+      <div className="px-3 py-2.5 border-b border-slate-100 shrink-0 flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2 h-3 w-3 text-slate-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar barrio..."
+            className="w-full pl-7 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-900"
+          />
+        </div>
+        <select
+          value={sort}
+          onChange={(e) => setSort(e.target.value as SortOption)}
+          className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-slate-900 text-slate-600 cursor-pointer"
+        >
+          <option value="activity">Actividad</option>
+          <option value="nn-desc">NNA ↓</option>
+          <option value="nn-asc">NNA ↑</option>
+          <option value="reports-desc">Reportes ↓</option>
+          <option value="reports-asc">Reportes ↑</option>
+          <option value="name-asc">Nombre A–Z</option>
+        </select>
+      </div>
+
+      {/* Rows */}
+      {filtered.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center py-10">
+          <p className="text-xs text-slate-400">Sin resultados para "{search}"</p>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+          {filtered.map((n) => (
+            <NeighborhoodRow key={n.neighborhood} n={n} maxNN={maxNN} maxReports={maxReports} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

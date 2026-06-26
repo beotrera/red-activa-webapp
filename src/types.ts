@@ -148,7 +148,10 @@ export interface NeighborhoodStat {
   neighborhood: string;
   nn: number;
   reports: number;
-  coordinates: [number, number] | null; // [longitude, latitude] — GeoJSON order
+  /** Centroid — [longitude, latitude], GeoJSON order */
+  coordinates: [number, number] | null;
+  /** Exterior ring of the neighborhood polygon — [longitude, latitude][], closed (first === last). */
+  polygon: [number, number][] | null;
   comuna: number | null;
 }
 
