@@ -214,7 +214,7 @@ export default function NNListPage() {
                   </div>
 
                   {/* Chevron */}
-                  <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-slate-500 transition-colors shrink-0" />
+                  <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-all shrink-0" />
                 </div>
               );
             })}

@@ -52,7 +52,7 @@ export default function Header({ currentUser, onLogout }: HeaderProps) {
               </span>
               <Activity className="h-4 w-4 text-white" />
             </div>
-            <div className="hidden sm:block">
+            <div className="hidden sm:block text-left">
               <span className="text-lg font-bold text-slate-900 tracking-tight">
                 Red<span className="text-[#991b1b]">Activa</span>
               </span>
