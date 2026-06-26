@@ -142,6 +142,16 @@ export interface PersonSimilarity {
   updatedAt: string;
 }
 
+// ─── Analytics ─────────────────────────────────────────────────────────────────
+
+export interface NeighborhoodStat {
+  neighborhood: string;
+  nn: number;
+  reports: number;
+  coordinates: [number, number] | null; // [longitude, latitude] — GeoJSON order
+  comuna: number | null;
+}
+
 // ─── API envelope ───────────────────────────────────────────────────────────────
 
 export interface ApiResponse<T> {

@@ -5,6 +5,7 @@ import {
   ConsciousnessLevel,
   NNStatus,
   PersonSimilarity,
+  NeighborhoodStat,
   ApiResponse,
 } from "../types";
 import { store } from "../store";
@@ -148,4 +149,14 @@ export async function updatePerson(
     body: JSON.stringify(data),
   });
   return normalizeId(await unwrap<NNAdmission>(res));
+}
+
+// ─── Analytics ───────────────────────────────────────────────────────────────────
+
+export async function fetchNeighborhoodStats(): Promise<NeighborhoodStat[]> {
+  const res = await fetch(`${API_BASE}/analytics/by-neighborhood`, {
+    headers: authHeaders(),
+  });
+  const list = await unwrap<NeighborhoodStat[]>(res);
+  return list ?? [];
 }

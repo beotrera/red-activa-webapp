@@ -5,6 +5,7 @@ import { useLogout } from "./hooks/useApi";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import Login from "./components/Login";
+import DashboardPage from "./pages/DashboardPage";
 import NNListPage from "./pages/NNListPage";
 import NNAdmissionPage from "./pages/NNAdmissionPage";
 import NNDetailPage from "./pages/NNDetailPage";
@@ -30,7 +31,8 @@ export default function App() {
 
       <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 grow flex flex-col gap-6">
         <Routes>
-          <Route path="/" element={<NNListPage />} />
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/nn" element={<NNListPage />} />
           <Route path="/admision" element={<NNAdmissionPage />} />
           <Route path="/nn/:id" element={<NNDetailPage />} />
         </Routes>

@@ -7,6 +7,7 @@ import {
   updatePerson,
   loginUser,
   logoutUser,
+  fetchNeighborhoodStats,
   CreateNNAdmissionPayload,
   UpdateNNAdmissionPayload,
 } from "../utils/api";
@@ -66,6 +67,14 @@ export function useUpdatePerson() {
       qc.invalidateQueries({ queryKey: PERSONS_KEY });
       qc.invalidateQueries({ queryKey: personKey(variables.id) });
     },
+  });
+}
+
+export function useNeighborhoodStats() {
+  return useQuery({
+    queryKey: ["analytics", "by-neighborhood"],
+    queryFn: fetchNeighborhoodStats,
+    staleTime: 60_000,
   });
 }
 

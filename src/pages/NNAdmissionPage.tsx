@@ -147,7 +147,7 @@ export default function NNAdmissionPage() {
   return (
     <div className="max-w-2xl mx-auto w-full space-y-4">
       <button
-        onClick={() => navigate("/")}
+        onClick={() => navigate("/nn")}
         className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-lg transition cursor-pointer"
       >
         <ArrowLeft className="h-3.5 w-3.5" />

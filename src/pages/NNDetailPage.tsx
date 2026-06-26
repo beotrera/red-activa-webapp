@@ -25,5 +25,5 @@ export default function NNDetailPage() {
     );
   }
 
-  return <NNDetail admission={admission} onBack={() => navigate("/")} />;
+  return <NNDetail admission={admission} onBack={() => navigate("/nn")} />;
 }

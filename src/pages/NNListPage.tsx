@@ -4,31 +4,38 @@ import { NNStatus, Gender } from "../types";
 import { usePersons } from "../hooks/useApi";
 import { getImageUrl } from "../utils/api";
 import PulseLoader from "../components/PulseLoader";
-import { Search, PlusCircle, Hospital, MapPin, ChevronRight, Camera, X } from "lucide-react";
+import { Search, PlusCircle, Hospital, ChevronRight, Camera, X, ArrowLeft } from "lucide-react";
 
 const GENDER_LABEL: Record<Gender, string> = {
-  [Gender.MALE]: "Masculino",
-  [Gender.FEMALE]: "Femenino",
+  [Gender.MALE]: "Masc.",
+  [Gender.FEMALE]: "Fem.",
 };
 
-const STATUS_BADGE: Record<NNStatus, { label: string; className: string; dotColor: string; accentBg: string }> = {
+const CONSCIOUSNESS_LABEL: Record<string, string> = {
+  CONSCIOUS: "Consciente",
+  DISORIENTED: "Desorientado",
+  UNCONSCIOUS: "Inconsciente",
+  SEDATED: "Sedado",
+};
+
+const STATUS_META: Record<NNStatus, { label: string; badgeClass: string; dotColor: string; rowBorder: string }> = {
   [NNStatus.UNIDENTIFIED]: {
-    label: "SIN IDENTIFICAR",
-    className: "text-slate-600 bg-slate-100 border border-slate-300",
+    label: "Sin identificar",
+    badgeClass: "text-slate-500 bg-slate-100 border border-slate-200",
     dotColor: "bg-slate-400",
-    accentBg: "bg-slate-300",
+    rowBorder: "border-l-slate-200",
   },
   [NNStatus.POTENTIAL_MATCH]: {
-    label: "COINCIDENCIA DETECTADA",
-    className: "text-amber-800 bg-amber-100 border border-amber-300",
-    dotColor: "bg-amber-500",
-    accentBg: "bg-amber-400",
+    label: "Coincidencia detectada",
+    badgeClass: "text-amber-700 bg-amber-50 border border-amber-200",
+    dotColor: "bg-amber-400",
+    rowBorder: "border-l-amber-400",
   },
   [NNStatus.IDENTIFIED]: {
-    label: "IDENTIFICADO",
-    className: "text-emerald-800 bg-emerald-100 border border-emerald-300",
+    label: "Identificado",
+    badgeClass: "text-emerald-700 bg-emerald-50 border border-emerald-200",
     dotColor: "bg-emerald-500",
-    accentBg: "bg-emerald-500",
+    rowBorder: "border-l-emerald-400",
   },
 };
 
@@ -42,8 +49,8 @@ export default function NNListPage() {
   const [lightboxPhoto, setLightboxPhoto] = useState<LightboxPhoto | null>(null);
 
   const filtered = admissions.filter((ad) => {
-    const searchString = `${ad.address} ${ad.neighborhood} ${ad.distinctiveFeatures} ${ad.estimatedAgeMin}-${ad.estimatedAgeMax} ${ad.gender} ${ad.reportedBy}`.toLowerCase();
-    const matchesSearch = searchString.includes(searchTerm.toLowerCase());
+    const s = `${ad.address} ${ad.neighborhood} ${ad.distinctiveFeatures} ${ad.estimatedAgeMin}-${ad.estimatedAgeMax} ${ad.gender} ${ad.reportedBy}`.toLowerCase();
+    const matchesSearch = s.includes(searchTerm.toLowerCase());
     if (statusFilter === "all") return matchesSearch;
     return ad.status === statusFilter && matchesSearch;
   });
@@ -58,17 +65,28 @@ export default function NNListPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
 
-      {/* ── Toolbar ── */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm">
-        <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100">
+      {/* ── Back ── */}
+      <button
+        onClick={() => navigate("/")}
+        className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-lg transition cursor-pointer"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" />
+        Volver al Panel
+      </button>
+
+      {/* ── Main container ── */}
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+
+        {/* Header */}
+        <div className="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
-              Registro de Pacientes No Identificados
+              Pacientes No Identificados
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Búsqueda, cotejo y homologación judicial · {filtered.length} expediente{filtered.length !== 1 ? "s" : ""} activo{filtered.length !== 1 ? "s" : ""}
+            <p className="text-xs text-slate-400 mt-0.5">
+              {filtered.length} expediente{filtered.length !== 1 ? "s" : ""} · Cotejo y homologación judicial
             </p>
           </div>
           <button
@@ -79,21 +97,23 @@ export default function NNListPage() {
             Admitir Paciente NN
           </button>
         </div>
-        <div className="px-5 py-3 flex flex-col sm:flex-row gap-3">
+
+        {/* Search + filter */}
+        <div className="px-5 py-3 border-b border-slate-100 flex gap-3 bg-slate-50/60">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
             <input
               type="text"
-              placeholder="Buscar por dirección, barrio, rasgos, edad, reportado por..."
+              placeholder="Buscar por barrio, rasgos, edad, reportado por..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8 pr-3 py-2 w-full bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-slate-900 focus:outline-none"
+              className="pl-8 pr-3 py-2 w-full bg-white border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-slate-900 focus:outline-none"
             />
           </div>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as "all" | NNStatus)}
-            className="py-2 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-slate-900 sm:w-52"
+            className="py-2 px-3 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-slate-900 sm:w-48"
           >
             <option value="all">Todos los estados</option>
             <option value={NNStatus.UNIDENTIFIED}>Sin identificar</option>
@@ -101,118 +121,133 @@ export default function NNListPage() {
             <option value={NNStatus.IDENTIFIED}>Identificados</option>
           </select>
         </div>
-      </div>
 
-      {/* ── Expediente list ── */}
-      {filtered.length === 0 ? (
-        <div className="bg-white border border-slate-200 rounded-xl p-14 text-center">
-          <p className="text-sm text-slate-400">No se encontraron expedientes con los criterios seleccionados.</p>
+        {/* Column headers */}
+        <div className="hidden md:flex items-center gap-4 px-5 py-2 border-b border-slate-100 bg-slate-50/40">
+          <div className="w-9 shrink-0" />
+          <span className="w-36 shrink-0 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Paciente</span>
+          <span className="flex-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Rasgos</span>
+          <span className="w-28 shrink-0 text-[10px] font-semibold text-slate-400 uppercase tracking-wider hidden lg:block">Barrio</span>
+          <span className="w-24 shrink-0 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Ingreso</span>
+          <span className="w-44 shrink-0 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Estado</span>
+          <div className="w-4 shrink-0" />
         </div>
-      ) : (
-        <div className="space-y-2">
-          {filtered.map((ad) => {
-            const badge = STATUS_BADGE[ad.status];
-            const firstPhoto = ad.identifyingPhotos?.[0];
-            const extraPhotos = (ad.identifyingPhotos?.length ?? 0) - 1;
-            return (
-              <div
-                key={ad.id}
-                className="relative bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-150 overflow-hidden"
-              >
-                {/* Status accent bar */}
-                <div className={`absolute inset-y-0 left-0 w-1 ${badge.accentBg}`} />
 
-                <div className="p-4 sm:p-5 pl-5 sm:pl-6 flex gap-4">
+        {/* Rows */}
+        {filtered.length === 0 ? (
+          <div className="py-16 text-center">
+            <p className="text-sm text-slate-400">No se encontraron expedientes con los criterios seleccionados.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {filtered.map((ad) => {
+              const meta = STATUS_META[ad.status];
+              const firstPhoto = ad.identifyingPhotos?.[0];
+              const extraPhotos = (ad.identifyingPhotos?.length ?? 0) - 1;
 
-                  {/* ── Left: main content ── */}
-                  <div className="flex-1 min-w-0 space-y-3">
-
-                    {/* Header row */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3 min-w-0">
-                        <div className="mt-0.5 p-2 rounded-lg bg-slate-100 border border-slate-200 text-slate-500 shrink-0">
-                          <Hospital className="h-3.5 w-3.5" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-slate-900 leading-snug">
-                            Paciente NN · {ad.estimatedAgeMin}–{ad.estimatedAgeMax} años · {GENDER_LABEL[ad.gender]}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
-                            <span className="flex items-center gap-1 text-xs text-slate-500">
-                              <MapPin className="h-3 w-3 text-slate-400 shrink-0" />
-                              <span className="truncate">{ad.address}{ad.neighborhood && ` — ${ad.neighborhood}`}</span>
-                            </span>
-                            <span className="text-xs text-slate-400">
-                              Ingresó el {new Date(ad.dateOfAdmission).toLocaleDateString("es-AR")} · {ad.reportedBy}
-                            </span>
+              return (
+                <div
+                  key={ad.id}
+                  onClick={() => navigate(`/nn/${ad.id}`)}
+                  className={`flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-colors cursor-pointer group border-l-2 ${meta.rowBorder}`}
+                >
+                  {/* Photo thumbnail */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      if (!firstPhoto) return;
+                      e.stopPropagation();
+                      setLightboxPhoto(firstPhoto);
+                    }}
+                    className="relative w-9 h-9 rounded-lg overflow-hidden bg-slate-100 border border-slate-200 shrink-0 flex items-center justify-center focus:outline-none"
+                  >
+                    {firstPhoto ? (
+                      <>
+                        <img
+                          src={getImageUrl(firstPhoto.url)}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                        {extraPhotos > 0 && (
+                          <div className="absolute inset-0 bg-slate-900/50 flex items-center justify-center">
+                            <span className="text-[9px] font-bold text-white">+{extraPhotos}</span>
                           </div>
-                        </div>
-                      </div>
-
-                      {/* Badge */}
-                      <div className="flex flex-col items-end gap-1.5 shrink-0">
-                        <span className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${badge.className}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${badge.dotColor}`} />
-                          {badge.label}
-                        </span>
-                        <span className="text-[10px] font-mono text-slate-400">#{ad.id.slice(-8)}</span>
-                      </div>
-                    </div>
-
-                    {/* Distinctive features */}
-                    <p className="text-xs text-slate-600 italic leading-relaxed pl-10 border-l border-slate-200 ml-5">
-                      {ad.distinctiveFeatures}
-                    </p>
-
-                    {/* Footer row */}
-                    <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100">
-                      <div className="flex flex-wrap gap-2 pl-10 text-xs text-slate-500">
-                        <span>Conciencia: <strong className="text-slate-700 font-semibold">{ad.consciousnessLevel}</strong></span>
-                        {ad.height != null && <span>· {ad.height} m</span>}
-                        {ad.weight != null && <span>· {ad.weight} kg</span>}
-                        {ad.assignedTo && (
-                          <span className="text-xs font-semibold text-slate-600 border border-slate-300 bg-slate-50 px-2 py-0.5 rounded">
-                            {ad.assignedTo}
-                          </span>
                         )}
-                      </div>
-                      <button
-                        onClick={() => navigate(`/nn/${ad.id}`)}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold bg-slate-900 text-white px-3 py-1.5 rounded-lg hover:bg-slate-700 transition-colors cursor-pointer shrink-0"
-                      >
-                        Ver expediente
-                        <ChevronRight className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
+                      </>
+                    ) : (
+                      <Hospital className="h-3.5 w-3.5 text-slate-400" />
+                    )}
+                  </button>
+
+                  {/* Identity */}
+                  <div className="w-36 shrink-0 min-w-0">
+                    <p className="text-sm font-semibold text-slate-900 leading-tight">
+                      {ad.estimatedAgeMin}–{ad.estimatedAgeMax} a. · {GENDER_LABEL[ad.gender]}
+                    </p>
+                    <p className="text-[10px] font-mono text-slate-400 mt-0.5">#{ad.id.slice(-8)}</p>
                   </div>
 
-                  {/* ── Right: photo ── */}
-                  {firstPhoto && (
-                    <button
-                      type="button"
-                      onClick={() => setLightboxPhoto(firstPhoto)}
-                      className="relative shrink-0 w-20 sm:w-24 self-stretch rounded-xl border border-slate-200 overflow-hidden bg-slate-50 hover:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 cursor-pointer transition-colors"
-                    >
-                      <img
-                        src={getImageUrl(firstPhoto.url)}
-                        alt="Evidencia"
-                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                        referrerPolicy="no-referrer"
-                      />
-                      {extraPhotos > 0 && (
-                        <div className="absolute bottom-0 inset-x-0 bg-slate-900/60 text-white text-[10px] font-bold text-center py-1">
-                          +{extraPhotos}
-                        </div>
-                      )}
-                    </button>
-                  )}
+                  {/* Distinctive features */}
+                  <p className="flex-1 min-w-0 text-xs text-slate-500 truncate">
+                    {ad.distinctiveFeatures}
+                  </p>
 
+                  {/* Neighborhood */}
+                  <p className="w-28 shrink-0 text-xs text-slate-500 truncate hidden lg:block">
+                    {ad.neighborhood || "—"}
+                  </p>
+
+                  {/* Date */}
+                  <div className="w-24 shrink-0 hidden md:block">
+                    <p className="text-xs text-slate-600">
+                      {new Date(ad.dateOfAdmission).toLocaleDateString("es-AR", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "2-digit",
+                      })}
+                    </p>
+                    {ad.consciousnessLevel && (
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        {CONSCIOUSNESS_LABEL[ad.consciousnessLevel] ?? ad.consciousnessLevel}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Status badge */}
+                  <div className="w-44 shrink-0 hidden md:flex items-center gap-1.5">
+                    <span className={`inline-flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-full ${meta.badgeClass}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${meta.dotColor}`} />
+                      {meta.label}
+                    </span>
+                  </div>
+
+                  {/* Chevron */}
+                  <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-slate-500 transition-colors shrink-0" />
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
+
+        {/* Footer count */}
+        {filtered.length > 0 && (
+          <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/40 flex items-center justify-between">
+            <p className="text-[11px] text-slate-400">
+              Mostrando {filtered.length} de {admissions.length} expedientes
+            </p>
+            {filtered.length < admissions.length && (
+              <button
+                onClick={() => { setSearchTerm(""); setStatusFilter("all"); }}
+                className="text-[11px] font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+              >
+                Limpiar filtros
+              </button>
+            )}
+          </div>
+        )}
+
+      </div>
 
       {/* ── Lightbox ── */}
       {lightboxPhoto && (
@@ -247,7 +282,9 @@ export default function NNListPage() {
             </div>
             {lightboxPhoto.uploadedAt && (
               <div className="px-4 py-3 border-t border-slate-100 flex justify-between items-center">
-                <span className="text-xs text-slate-400 font-mono">{new Date(lightboxPhoto.uploadedAt).toLocaleString()}</span>
+                <span className="text-xs text-slate-400 font-mono">
+                  {new Date(lightboxPhoto.uploadedAt).toLocaleString()}
+                </span>
                 <button
                   type="button"
                   onClick={() => setLightboxPhoto(null)}
