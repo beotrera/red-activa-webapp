@@ -4,7 +4,7 @@ import { NNStatus, Gender } from "../types";
 import { usePersons } from "../hooks/useApi";
 import { getImageUrl } from "../utils/api";
 import PulseLoader from "../components/PulseLoader";
-import { Search, PlusCircle, Hospital, MapPin, FileText, CheckCircle2, Camera, X } from "lucide-react";
+import { Search, PlusCircle, Hospital, MapPin, FileText, Camera, X } from "lucide-react";
 
 const GENDER_LABEL: Record<Gender, string> = {
   [Gender.MALE]: "Masculino",
@@ -43,7 +43,7 @@ export default function NNListPage() {
       <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-base font-bold uppercase tracking-wider text-slate-900">
+            <h2 className="text-base font-bold text-slate-900">
               Búsqueda e Inteligencia de Coincidencias en Pacientes NN
             </h2>
             <p className="text-sm text-slate-500 mt-1">
@@ -52,7 +52,7 @@ export default function NNListPage() {
           </div>
           <button
             onClick={() => navigate("/admision")}
-            className="bg-red-50 hover:bg-red-100 text-[#991b1b] border border-red-200 font-bold text-sm px-4 py-2 rounded-lg cursor-pointer transition flex items-center gap-2 shrink-0"
+            className="bg-[#991b1b] hover:bg-red-900 text-white font-semibold text-sm px-4 py-2 rounded-lg cursor-pointer transition flex items-center gap-2 shrink-0"
           >
             <PlusCircle className="h-3.5 w-3.5" />
             Admitir Paciente NN
@@ -84,7 +84,7 @@ export default function NNListPage() {
       </div>
 
       {/* List */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {filtered.length === 0 ? (
           <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 text-center text-slate-400 text-sm italic">
             No se registraron coincidencias médicas con el filtro seleccionado.
@@ -95,134 +95,134 @@ export default function NNListPage() {
               key={ad.id}
               className={`bg-white rounded-2xl border transition-all duration-200 overflow-hidden ${
                 ad.status === NNStatus.IDENTIFIED
-                  ? "border-emerald-200 bg-slate-50/40 opacity-90"
+                  ? "border-emerald-200"
                   : ad.status === NNStatus.POTENTIAL_MATCH
-                  ? "border-amber-300 ring-1 ring-amber-200 shadow-sm"
+                  ? "border-amber-300 ring-1 ring-amber-200"
                   : "border-slate-200 hover:border-slate-300"
               }`}
             >
-              <div className="p-4 sm:p-5 flex items-start gap-4">
-                <div
-                  className={`p-2.5 rounded-xl border shrink-0 ${
-                    ad.status === NNStatus.IDENTIFIED
-                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                      : ad.status === NNStatus.POTENTIAL_MATCH
-                      ? "bg-amber-50 text-amber-700 border-amber-200 animate-pulse"
-                      : "bg-slate-50 text-slate-700 border-slate-200"
-                  }`}
-                >
-                  <Hospital className="h-5 w-5" />
-                </div>
+              <div className="p-4 sm:p-5 space-y-3">
 
-                <div className="space-y-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h4 className="text-sm font-bold text-slate-950">
-                      NN de aprox. {ad.estimatedAgeMin}–{ad.estimatedAgeMax} años ({GENDER_LABEL[ad.gender]})
-                    </h4>
+                {/* Row 1: Status icon + Title + Badge */}
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`p-2 rounded-lg border shrink-0 ${
+                      ad.status === NNStatus.IDENTIFIED
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : ad.status === NNStatus.POTENTIAL_MATCH
+                        ? "bg-amber-50 text-amber-700 border-amber-200"
+                        : "bg-slate-50 text-slate-600 border-slate-200"
+                    }`}
+                  >
+                    <Hospital className="h-4 w-4" />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 min-w-0">
+                    <span className="text-sm font-semibold text-slate-900">
+                      NN aprox. {ad.estimatedAgeMin}–{ad.estimatedAgeMax} años ({GENDER_LABEL[ad.gender]})
+                    </span>
                     <span
-                      className={`text-xs font-bold px-2 py-0.5 rounded ${
+                      className={`text-xs font-semibold px-2 py-0.5 rounded border ${
                         ad.status === NNStatus.IDENTIFIED
-                          ? "bg-green-50 text-green-700 border border-green-200"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                           : ad.status === NNStatus.POTENTIAL_MATCH
-                          ? "bg-amber-50 text-amber-700 border border-amber-200 animate-pulse"
-                          : "bg-slate-100 text-slate-600"
+                          ? "bg-amber-50 text-amber-700 border-amber-200"
+                          : "bg-slate-100 text-slate-600 border-slate-200"
                       }`}
                     >
-                      {ad.status === NNStatus.IDENTIFIED ? "✓ IDENTIFICADO" : ad.status === NNStatus.POTENTIAL_MATCH ? "🔍 COINCIDENCIA" : "SIN IDENTIFICAR"}
+                      {ad.status === NNStatus.IDENTIFIED
+                        ? "Identificado"
+                        : ad.status === NNStatus.POTENTIAL_MATCH
+                        ? "Coincidencia"
+                        : "Sin identificar"}
                     </span>
                   </div>
-                  <p className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-                    <MapPin className="h-4 w-4 text-slate-400 shrink-0" />
-                    {ad.address} {ad.neighborhood && `— ${ad.neighborhood}`}
-                  </p>
-                  <p className="text-xs text-slate-400">
-                    Ingreso reportado: {new Date(ad.dateOfAdmission).toLocaleString()} por {ad.reportedBy}
-                  </p>
                 </div>
-              </div>
 
-              <div className="px-5 pb-4">
-                <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                  <span className="text-xs text-slate-400 font-bold block uppercase tracking-wider mb-2">
-                    Cuerpo e Indicios Particulares
+                {/* Row 2: Address + Date */}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                    <span className="text-slate-700 font-medium">
+                      {ad.address}{ad.neighborhood && ` — ${ad.neighborhood}`}
+                    </span>
                   </span>
-                  <p className="text-sm text-slate-700 italic leading-relaxed">"{ad.distinctiveFeatures}"</p>
+                  <span>
+                    Ingreso: {new Date(ad.dateOfAdmission).toLocaleDateString()} · {ad.reportedBy}
+                  </span>
+                </div>
 
-                  {ad.identifyingPhotos && ad.identifyingPhotos.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-slate-200/55 space-y-1.5">
-                      <span className="text-xs text-[#991b1b] font-bold block uppercase tracking-wider">
-                        Galería de Evidencia (Tatuajes / Marcas)
-                      </span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {ad.identifyingPhotos.slice(0, 2).map((photo, pIdx) => (
-                          <button
-                            type="button"
-                            key={pIdx}
-                            onClick={() => setLightboxPhoto(photo)}
-                            className="group border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#991b1b] cursor-pointer transition hover:border-[#991b1b]/50 w-fit"
-                          >
-                            <div className="relative w-50 h-50 overflow-hidden bg-slate-50">
-                              <img
-                                src={getImageUrl(photo.url)}
-                                alt="Evidencia"
-                                className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                                referrerPolicy="no-referrer"
-                              />
-                              <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition duration-200">
-                                <span className="text-white text-xs font-bold uppercase tracking-wider bg-slate-900/85 px-2.5 py-1 rounded">
-                                  Ampliar
-                                </span>
-                              </div>
-                            </div>
-                          </button>
-                        ))}
-                        {ad.identifyingPhotos.length > 2 && (
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/nn/${ad.id}`)}
-                            className="w-50 h-50 rounded-xl border-2 border-dashed border-slate-200 hover:border-[#991b1b]/40 bg-slate-50 hover:bg-red-50/30 flex flex-col items-center justify-center gap-1 transition cursor-pointer group"
-                          >
-                            <span className="text-xl font-black text-slate-400 group-hover:text-[#991b1b] transition">
-                              +{ad.identifyingPhotos.length - 2}
-                            </span>
-                            <span className="text-xs font-semibold text-slate-400 group-hover:text-[#991b1b] transition">
-                              Ver todas
-                            </span>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                {/* Row 3: Distinctive features */}
+                <p className="text-sm text-slate-600 italic leading-relaxed border-t border-slate-100 pt-3">
+                  "{ad.distinctiveFeatures}"
+                </p>
 
-                  <div className="mt-3 flex flex-wrap gap-4 items-center text-sm text-slate-500 pt-3 border-t border-slate-200/55">
-                    <span>Conciencia: <strong className="text-slate-700">{ad.consciousnessLevel}</strong></span>
-                    {ad.height != null && <span>Estatura: <strong className="text-slate-700">{ad.height} m</strong></span>}
-                    {ad.weight != null && <span>Peso: <strong className="text-slate-700">{ad.weight} kg</strong></span>}
-                    {ad.assignedTo && (
+                {/* Row 4: Photo thumbnails */}
+                {ad.identifyingPhotos && ad.identifyingPhotos.length > 0 && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {ad.identifyingPhotos.slice(0, 3).map((photo, pIdx) => (
+                      <button
+                        type="button"
+                        key={pIdx}
+                        onClick={() => setLightboxPhoto(photo)}
+                        className="group border border-slate-200 rounded-lg overflow-hidden bg-white focus:outline-none focus:ring-2 focus:ring-slate-400 cursor-pointer transition hover:border-slate-400"
+                      >
+                        <div className="relative w-16 h-16 overflow-hidden bg-slate-50">
+                          <img
+                            src={getImageUrl(photo.url)}
+                            alt="Evidencia"
+                            className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                            referrerPolicy="no-referrer"
+                          />
+                        </div>
+                      </button>
+                    ))}
+                    {ad.identifyingPhotos.length > 3 && (
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/nn/${ad.id}`)}
+                        className="w-16 h-16 rounded-lg border border-dashed border-slate-200 hover:border-slate-400 bg-slate-50 flex flex-col items-center justify-center gap-0.5 transition cursor-pointer"
+                      >
+                        <span className="text-sm font-bold text-slate-500">+{ad.identifyingPhotos.length - 3}</span>
+                        <span className="text-xs text-slate-400">más</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Row 5: Metadata + Action */}
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                    <span>
+                      Conciencia:{" "}
+                      <span className="text-slate-700 font-medium">{ad.consciousnessLevel}</span>
+                    </span>
+                    {ad.height != null && (
                       <span>
-                        Designado a:{" "}
-                        <strong className="text-[#991b1b] bg-red-50 border border-red-200 px-2.5 py-0.5 rounded-md font-extrabold uppercase text-xs inline-block">
-                          {ad.assignedTo}
-                        </strong>
+                        Estatura:{" "}
+                        <span className="text-slate-700 font-medium">{ad.height} m</span>
+                      </span>
+                    )}
+                    {ad.weight != null && (
+                      <span>
+                        Peso:{" "}
+                        <span className="text-slate-700 font-medium">{ad.weight} kg</span>
+                      </span>
+                    )}
+                    {ad.assignedTo && (
+                      <span className="text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">
+                        {ad.assignedTo}
                       </span>
                     )}
                   </div>
-                </div>
-
-                <div className="mt-4 flex items-center justify-between gap-3">
                   <button
                     onClick={() => navigate(`/nn/${ad.id}`)}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-[#991b1b] text-sm font-extrabold uppercase tracking-wider rounded-lg cursor-pointer transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#991b1b] hover:bg-red-900 text-white text-xs font-semibold rounded-lg cursor-pointer transition-colors"
                   >
                     <FileText className="h-3.5 w-3.5" />
-                    Ver Expediente Completo
+                    Ver Expediente
                   </button>
-                  {ad.status === NNStatus.IDENTIFIED && (
-                    <span className="text-sm text-emerald-700 font-bold flex items-center gap-1.5">
-                      <CheckCircle2 className="h-4 w-4" /> Caso Homologado
-                    </span>
-                  )}
                 </div>
+
               </div>
             </div>
           ))
@@ -239,22 +239,20 @@ export default function NNListPage() {
             className="bg-white rounded-3xl overflow-hidden max-w-xl w-full border border-slate-200 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bg-[#991b1b] text-white p-4 flex items-center justify-between border-b border-red-950">
+            <div className="bg-slate-900 text-white p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Camera className="h-4 w-4 text-white" />
-                <span className="text-xs font-extrabold uppercase tracking-widest text-red-200">
-                  Detalle de Evidencia Coincidente
-                </span>
+                <Camera className="h-4 w-4 text-slate-400" />
+                <span className="text-xs font-semibold text-slate-300">Detalle de evidencia</span>
               </div>
               <button
                 type="button"
                 onClick={() => setLightboxPhoto(null)}
-                className="text-white hover:text-red-100 p-1 rounded-lg border border-red-800 bg-red-900/50 hover:bg-red-900 transition cursor-pointer"
+                className="text-slate-400 hover:text-white p-1 rounded-lg transition cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="aspect-square w-full bg-slate-50 flex items-center justify-center border-b border-slate-100">
+            <div className="aspect-square w-full bg-slate-50 flex items-center justify-center">
               <img
                 src={getImageUrl(lightboxPhoto.url)}
                 alt="Evidencia médica"
@@ -271,7 +269,7 @@ export default function NNListPage() {
               <button
                 type="button"
                 onClick={() => setLightboxPhoto(null)}
-                className="ml-auto px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition cursor-pointer uppercase"
+                className="ml-auto px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition cursor-pointer"
               >
                 Cerrar
               </button>

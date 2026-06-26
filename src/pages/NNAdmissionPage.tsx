@@ -155,20 +155,17 @@ export default function NNAdmissionPage() {
       </button>
 
       <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-5 shadow-sm">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2">
-            <Hospital className="h-5 w-5 text-slate-800" />
-            Carga Rápida de Ingreso NN
+        <div className="flex items-center border-b border-slate-100 pb-4">
+          <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+            <Hospital className="h-5 w-5 text-slate-500" />
+            Carga rápida de ingreso NN
           </h3>
-          <span className="text-xs font-bold text-slate-400 bg-slate-50 border border-slate-200 px-3 py-1 rounded-md">
-            Vía Guardia
-          </span>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 text-sm">
           <div className="grid grid-cols-3 gap-2.5">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Edad Mín. *</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">Edad mín. *</label>
               <input
                 type="text"
                 inputMode="numeric"
@@ -180,7 +177,7 @@ export default function NNAdmissionPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Edad Máx. *</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">Edad máx. *</label>
               <input
                 type="text"
                 inputMode="numeric"
@@ -192,7 +189,7 @@ export default function NNAdmissionPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Género *</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">Género *</label>
               <select
                 value={gender}
                 onChange={(e) => setGender(e.target.value as Gender)}
@@ -206,7 +203,7 @@ export default function NNAdmissionPage() {
 
           <div className="grid grid-cols-2 gap-2.5">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Estatura aprox. (m)</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">Estatura aprox. (m)</label>
               <input
                 type="text"
                 inputMode="decimal"
@@ -218,7 +215,7 @@ export default function NNAdmissionPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Peso aprox. (kg)</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">Peso aprox. (kg)</label>
               <input
                 type="text"
                 inputMode="decimal"
@@ -231,7 +228,7 @@ export default function NNAdmissionPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Nivel de Conciencia *</label>
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">Nivel de conciencia *</label>
             <select
               value={consciousness}
               onChange={(e) => setConsciousness(e.target.value as ConsciousnessLevel)}
@@ -245,7 +242,7 @@ export default function NNAdmissionPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Rasgos, Señas o Ropa *</label>
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">Rasgos, señas o ropa *</label>
             <textarea
               rows={3}
               placeholder="Ej: Tatuaje de rosa azul en antebrazo izquierdo, viste buzo negro y zapatillas rojas..."
@@ -256,14 +253,14 @@ export default function NNAdmissionPage() {
             />
           </div>
 
-          <div className="p-3 bg-red-50/20 border border-red-200/40 rounded-xl space-y-3">
-            <div className="flex items-center gap-1.5 border-b border-red-200/30 pb-2">
-              <Camera className="h-4 w-4 text-[#991b1b]" />
-              <span className="text-xs font-bold text-[#991b1b] uppercase tracking-wider">
-                Fotos (Tatuajes / Marcas / Cicatrices)
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+            <div className="flex items-center gap-1.5 border-b border-slate-200 pb-2">
+              <Camera className="h-4 w-4 text-slate-500" />
+              <span className="text-xs font-semibold text-slate-700">
+                Fotos (tatuajes / marcas / cicatrices)
               </span>
               {photos.length > 0 && (
-                <span className="ml-auto text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                <span className="ml-auto text-xs font-semibold text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-full">
                   {photos.length} archivo{photos.length > 1 ? "s" : ""}
                 </span>
               )}
@@ -272,13 +269,13 @@ export default function NNAdmissionPage() {
             {photos.length > 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {photos.map((file, idx) => (
-                  <div key={idx} className="relative rounded-xl border border-[#991b1b]/20 overflow-hidden bg-white shadow-sm flex flex-col">
+                  <div key={idx} className="relative rounded-xl border border-slate-200 overflow-hidden bg-white shadow-sm flex flex-col">
                     <img src={URL.createObjectURL(file)} alt={file.name} className="h-28 w-full object-cover" />
                     <div className="px-2 py-1.5 text-xs text-slate-500 line-clamp-1 bg-slate-50">{file.name}</div>
                     <button
                       type="button"
                       onClick={() => setPhotos(photos.filter((_, i) => i !== idx))}
-                      className="absolute top-1.5 right-1.5 p-1 bg-red-600 hover:bg-red-700 text-white rounded-md transition cursor-pointer"
+                      className="absolute top-1.5 right-1.5 p-1 bg-slate-700 hover:bg-slate-900 text-white rounded-md transition cursor-pointer"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -293,14 +290,14 @@ export default function NNAdmissionPage() {
               onDragLeave={(e) => { e.preventDefault(); setDragActive(false); }}
               onDrop={handleFileDrop}
               className={`border-2 border-dashed rounded-xl p-4 text-center transition ${
-                dragActive ? "border-[#991b1b] bg-red-50/40" : "border-slate-200 hover:border-[#991b1b]/30"
+                dragActive ? "border-slate-400 bg-slate-100" : "border-slate-200 hover:border-slate-400"
               }`}
             >
               <label className="cursor-pointer block space-y-2">
                 <Image className="mx-auto h-8 w-8 text-slate-400" />
-                <div className="text-sm text-slate-700 font-semibold">
+                <div className="text-sm text-slate-700 font-medium">
                   Arrastre aquí o{" "}
-                  <span className="text-[#991b1b] underline">seleccione archivos</span>
+                  <span className="text-slate-900 underline">seleccione archivos</span>
                 </div>
                 <p className="text-xs text-slate-400">JPG / PNG / WEBP — hasta 10 archivos, 5 MB c/u</p>
                 <input
@@ -317,7 +314,7 @@ export default function NNAdmissionPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-[#991b1b] hover:bg-red-900 disabled:opacity-70 disabled:cursor-not-allowed text-white font-bold py-3 text-sm rounded-xl transition duration-150 cursor-pointer flex items-center justify-center gap-2"
+            className="w-full bg-[#991b1b] hover:bg-red-900 disabled:opacity-70 disabled:cursor-not-allowed text-white font-semibold py-3 text-sm rounded-xl transition duration-150 cursor-pointer flex items-center justify-center gap-2"
           >
             {submitting ? (
               <PulseLoader className="h-5 w-5 text-white" />
