@@ -3,6 +3,8 @@ import {
   fetchPersons,
   fetchPersonById,
   fetchPersonSimilarities,
+  fetchPersonAudioBlob,
+  uploadPersonAudio,
   createNNAdmission,
   updatePerson,
   loginUser,
@@ -50,11 +52,36 @@ export function useSimilarities(id: string | undefined, enabled = true) {
   });
 }
 
+export const personAudioKey = (id: string) => ["persons", id, "audio"] as const;
+
+/** Fetches the raw audio Blob for a person. The Blob's object URL lifecycle is the caller's responsibility. */
+export function usePersonAudio(personId: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: personAudioKey(personId ?? ""),
+    queryFn: () => fetchPersonAudioBlob(personId as string),
+    enabled: enabled && !!personId,
+    staleTime: 30_000,
+  });
+}
+
+/**
+ * Creates the person first, then — if an audio recording was provided — uploads it
+ * as a second request using the id returned by the creation call.
+ */
 export function useCreateNNAdmission() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: CreateNNAdmissionPayload) => createNNAdmission(data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: PERSONS_KEY }),
+    mutationFn: async ({ data, audio }: { data: CreateNNAdmissionPayload; audio?: File }) => {
+      const created = await createNNAdmission(data);
+      if (audio) {
+        return uploadPersonAudio(created.id, audio);
+      }
+      return created;
+    },
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: PERSONS_KEY });
+      qc.invalidateQueries({ queryKey: personAudioKey(result.id) });
+    },
   });
 }
 

@@ -6,7 +6,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
-const PORT = 3002;
+const PORT = 3000;
 
 // This server only serves the frontend (Vite dev middleware / static build).
 // All API calls go directly to the real backend configured via VITE_API_BASE_URL.

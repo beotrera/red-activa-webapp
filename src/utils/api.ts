@@ -6,7 +6,6 @@ import {
   NNStatus,
   PersonSimilarity,
   NeighborhoodStat,
-  ApiResponse,
 } from "../types";
 import { store } from "../store";
 
@@ -15,7 +14,9 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 // Static assets (uploaded images) are served from the host root, not under /api
 const STATIC_BASE = API_BASE.replace(/\/api\/?$/, "");
 
-export function getImageUrl(path: string | undefined | null): string | undefined {
+export function getImageUrl(
+  path: string | undefined | null,
+): string | undefined {
   if (!path) return undefined;
   if (path.startsWith("http")) return path;
   return `${STATIC_BASE}${path.startsWith("/") ? "" : "/"}${path}`;
@@ -34,11 +35,19 @@ function authHeadersNoContentType(): HeadersInit {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-/** Unwraps the { result, data, showMessage, ... } envelope and throws a user-facing message on failure. */
+/**
+ * Unwraps the API envelope and throws a user-facing message on failure.
+ * Tolerant of both envelope shapes seen across the API:
+ *  - { result, data, message, showMessage, needUpdate }  (most endpoints)
+ *  - { success, data, errorCode, substitutions }          (persons/:id/audio)
+ */
 async function unwrap<T>(res: Response): Promise<T> {
-  const body: ApiResponse<T> = await res.json().catch(() => ({} as ApiResponse<T>));
-  if (!res.ok || body.result === false) {
-    throw new Error(body.showMessage?.ES || body.message || "Ocurrió un error inesperado");
+  const body: any = await res.json().catch(() => ({}));
+  const ok = body.result ?? body.success;
+  if (!res.ok || ok === false) {
+    throw new Error(
+      body.showMessage?.ES || body.message || "Ocurrió un error inesperado",
+    );
   }
   return body.data as T;
 }
@@ -50,7 +59,10 @@ function normalizeId<T extends { _id?: string; id?: string }>(obj: T): T {
 
 // ─── Auth ──────────────────────────────────────────────────────────────────────
 
-export async function loginUser(email: string, password: string): Promise<RedActivaUser> {
+export async function loginUser(
+  email: string,
+  password: string,
+): Promise<RedActivaUser> {
   const res = await fetch(`${API_BASE}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -112,7 +124,9 @@ export async function fetchPersonById(id: string): Promise<NNAdmission> {
   return normalizeId(await unwrap<NNAdmission>(res));
 }
 
-export async function fetchPersonSimilarities(id: string): Promise<PersonSimilarity[]> {
+export async function fetchPersonSimilarities(
+  id: string,
+): Promise<PersonSimilarity[]> {
   const res = await fetch(`${API_BASE}/persons/${id}/similarities`, {
     headers: authHeaders(),
   });
@@ -120,7 +134,9 @@ export async function fetchPersonSimilarities(id: string): Promise<PersonSimilar
   return list ?? [];
 }
 
-export async function createNNAdmission(data: CreateNNAdmissionPayload): Promise<NNAdmission> {
+export async function createNNAdmission(
+  data: CreateNNAdmissionPayload,
+): Promise<NNAdmission> {
   const formData = new FormData();
   formData.append("estimatedAgeMin", String(data.estimatedAgeMin));
   formData.append("estimatedAgeMax", String(data.estimatedAgeMax));
@@ -141,7 +157,7 @@ export async function createNNAdmission(data: CreateNNAdmissionPayload): Promise
 
 export async function updatePerson(
   id: string,
-  data: UpdateNNAdmissionPayload
+  data: UpdateNNAdmissionPayload,
 ): Promise<NNAdmission> {
   const res = await fetch(`${API_BASE}/persons/${id}`, {
     method: "PUT",
@@ -149,6 +165,47 @@ export async function updatePerson(
     body: JSON.stringify(data),
   });
   return normalizeId(await unwrap<NNAdmission>(res));
+}
+
+// ─── Person audio (one attachment per person) ──────────────────────────────────
+
+/** Uploads/replaces the single audio attachment for an existing person. */
+export async function uploadPersonAudio(personId: string, audio: File): Promise<NNAdmission> {
+  const formData = new FormData();
+  formData.append("audio", audio);
+
+  const res = await fetch(`${API_BASE}/persons/${personId}/audio`, {
+    method: "POST",
+    headers: authHeadersNoContentType(),
+    body: formData,
+  });
+  return normalizeId(await unwrap<NNAdmission>(res));
+}
+
+export interface PersonAudioBlob {
+  blob: Blob;
+  mimeType: string;
+}
+
+/**
+ * GET /persons/:id/audio returns the raw audio bytes (not JSON) on success — Content-Type
+ * is the original mimeType. On error it returns a normal WSresponse JSON body instead.
+ * Returns null when the person has no audio attached (errorCode 5001) or doesn't exist (5000).
+ */
+export async function fetchPersonAudioBlob(personId: string): Promise<PersonAudioBlob | null> {
+  const token = store.getState().auth.user?.token;
+  const res = await fetch(`${API_BASE}/persons/${personId}/audio`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    if (body.errorCode === 5001 || body.errorCode === 5000) return null;
+    throw new Error(body.showMessage?.ES || body.message || "No se pudo obtener el audio");
+  }
+
+  const blob = await res.blob();
+  return { blob, mimeType: res.headers.get("Content-Type") ?? blob.type };
 }
 
 // ─── Analytics ───────────────────────────────────────────────────────────────────

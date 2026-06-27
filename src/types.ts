@@ -80,7 +80,6 @@ export interface PersonCreatedBy {
   email: string;
 }
 
-// Frontend-facing shape of a Person/NN record, normalized (_id → id).
 export interface NNAdmission {
   id: string;
   estimatedAgeMin: number;
@@ -104,7 +103,6 @@ export interface NNAdmission {
   updatedAt?: string;
 }
 
-// ─── Reports (citizen missing-person reports — read only) ─────────────────────
 
 export interface Report {
   _id: string;

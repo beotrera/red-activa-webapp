@@ -17,11 +17,13 @@ import {
   Brain,
   Building2,
   Calendar,
+  Mic,
 } from "lucide-react";
 import { NNAdmission, Gender, ConsciousnessLevel, NNStatus, UserRole, Institution } from "../types";
-import { useUpdatePerson, useSimilarities } from "../hooks/useApi";
+import { useUpdatePerson, useSimilarities, usePersonAudio } from "../hooks/useApi";
 import { getImageUrl } from "../utils/api";
 import { useAppSelector } from "../hooks/useAppDispatch";
+import PersonAudioPlayer from "./PersonAudioPlayer";
 
 const GENDER_LABEL: Record<Gender, string> = {
   [Gender.MALE]: "Masculino",
@@ -97,6 +99,7 @@ export default function NNDetail({ admission: initial, onBack }: NNDetailProps) 
 
   const updateMutation = useUpdatePerson();
   const { data: similarities = [], isLoading: loadingSimilarities } = useSimilarities(admission.id);
+  const { data: audio } = usePersonAudio(admission.id);
 
   const handleStatusChange = (status: NNStatus) => {
     setStatusOpen(false);
@@ -300,6 +303,19 @@ export default function NNDetail({ admission: initial, onBack }: NNDetailProps) 
               <p className="text-sm text-slate-700 italic leading-relaxed">"{admission.distinctiveFeatures}"</p>
             </div>
           </div>
+
+          {/* Audio note — single attachment per person */}
+          {audio && (
+            <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+              <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-2">
+                <Mic className="h-3.5 w-3.5 text-slate-400" />
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Nota de voz</span>
+              </div>
+              <div className="p-5">
+                <PersonAudioPlayer blob={audio.blob} className="w-full h-10" />
+              </div>
+            </div>
+          )}
 
           {/* Similarities */}
           <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
