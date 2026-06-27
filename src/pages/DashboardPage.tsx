@@ -37,7 +37,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <KpiCard
           value={totalNN}
-          label="NNA registrados"
+          label="NNs registrados"
           sublabel="Personas no identificadas"
           color="red"
           Icon={Users}

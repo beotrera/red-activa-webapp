@@ -14,28 +14,6 @@ export default function Footer() {
         <p className="text-xs font-semibold text-slate-600">
           RedActiva · Sistema Federal de Detección y Vinculación de Personas
         </p>
-        <nav className="flex items-center gap-1">
-          {NAV_ITEMS.map(({ to, label, Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                `inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${
-                  isActive
-                    ? "text-slate-900 bg-slate-100"
-                    : "text-slate-400 hover:text-slate-700 hover:bg-slate-50"
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <Icon className={`h-3 w-3 ${isActive ? "text-slate-700" : "text-slate-400"}`} />
-                  {label}
-                </>
-              )}
-            </NavLink>
-          ))}
-        </nav>
         <p className="text-xs text-slate-400">
           República Argentina · Ministerio de Salud, Justicia y Seguridad
         </p>
