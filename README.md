@@ -19,6 +19,7 @@
 - [Stack tecnológico](#stack-tecnológico)
 - [Estructura del proyecto](#estructura-del-proyecto)
 - [Páginas y componentes](#páginas-y-componentes)
+- [Nota de voz por paciente](#nota-de-voz-por-paciente)
 - [Conexión con la API](#conexión-con-la-api)
 - [Cómo correr el proyecto](#cómo-correr-el-proyecto)
 - [Variables de entorno](#variables-de-entorno)
@@ -78,16 +79,18 @@ red-activa-webapp/
 │   └── favicon.svg
 ├── src/
 │   ├── components/
-│   │   ├── CabaMap.tsx        # Mapa SVG interactivo de CABA (polígonos por barrio)
+│   │   ├── CabaMap.tsx           # Mapa SVG interactivo de CABA (polígonos por barrio)
 │   │   ├── Footer.tsx
-│   │   ├── Header.tsx         # Navbar con NavLinks y estado activo
+│   │   ├── Header.tsx            # Navbar con NavLinks y estado activo
 │   │   ├── LocationMap.tsx
 │   │   ├── Login.tsx
 │   │   ├── NNDetail.tsx
+│   │   ├── PersonAudioPlayer.tsx # Reproductor de nota de voz con gestión de object URL
 │   │   └── PulseLoader.tsx
 │   ├── hooks/
-│   │   ├── useApi.ts          # Hooks de TanStack Query para cada endpoint
-│   │   └── useAppDispatch.ts  # Dispatch tipado de Redux
+│   │   ├── useApi.ts             # Hooks de TanStack Query para cada endpoint
+│   │   ├── useAudioRecorder.ts   # Grabación de audio vía MediaRecorder (estados, timer, límites)
+│   │   └── useAppDispatch.ts     # Dispatch tipado de Redux
 │   ├── pages/
 │   │   ├── DashboardPage.tsx    # Panel principal: KPIs, mapa, tabla por barrio
 │   │   ├── NNAdmissionPage.tsx  # Alta de persona no identificada
@@ -129,6 +132,40 @@ red-activa-webapp/
 
 ---
 
+## Nota de voz por paciente
+
+Al registrar o consultar un paciente N.N., el personal de salud puede adjuntar una **nota de voz** que queda vinculada al expediente.
+
+### Grabación (alta de paciente — `NNAdmissionPage`)
+
+- El formulario de admisión incluye un grabador de audio integrado.
+- Al pulsar **Grabar audio**, el navegador solicita permiso al micrófono y comienza la captura usando la API nativa `MediaRecorder`.
+- El audio se acumula como chunks de datos binarios. Al detener la grabación, los chunks se ensamblan en un `Blob` (bytes crudos) y se envuelven en un `File`.
+- El archivo se sube junto al resto del formulario en la misma mutación: primero `POST /persons` (que crea el registro), y luego `POST /persons/:id/audio` con el audio en `multipart/form-data`.
+- Límites: **2 minutos** de duración máxima · **5 MB** de tamaño máximo.
+- El formato se elige automáticamente según el navegador: `webm`, `mp4` o `ogg`.
+
+### Reproducción (detalle de paciente — `NNDetail`)
+
+- Al abrir el detalle de un paciente, el hook `usePersonAudio` consulta `GET /persons/:id/audio`.
+- El servidor devuelve los **bytes crudos** del audio (no JSON). El frontend los recibe como `Blob`, genera una URL temporal en memoria con `URL.createObjectURL()` y la asigna a un `<audio controls>` estándar.
+- La URL temporal se libera con `URL.revokeObjectURL()` cuando el componente se desmonta, evitando fugas de memoria.
+- Si el paciente no tiene audio adjunto (código de error `5001`), la sección no se muestra.
+
+### Archivos involucrados
+
+| Archivo | Rol |
+| --- | --- |
+| `src/hooks/useAudioRecorder.ts` | Lógica de grabación: estados, timer, límites, limpieza |
+| `src/components/PersonAudioPlayer.tsx` | Gestión del ciclo de vida del object URL y renderizado del `<audio>` |
+| `src/utils/api.ts` — `uploadPersonAudio` | `POST /persons/:id/audio` con `FormData` |
+| `src/utils/api.ts` — `fetchPersonAudioBlob` | `GET /persons/:id/audio` → `Blob` |
+| `src/hooks/useApi.ts` — `usePersonAudio` | Hook TanStack Query con caché de 30 s |
+| `src/pages/NNAdmissionPage.tsx` | UI del grabador en el formulario de alta |
+| `src/components/NNDetail.tsx` | Sección "Nota de voz" en el detalle del paciente |
+
+---
+
 ## Conexión con la API
 
 Las llamadas se centralizan en `src/hooks/useApi.ts` (TanStack Query) y `src/utils/api.ts` (fetch). Todos los requests adjuntan el token JWT en el header `Authorization: Bearer <token>`.
@@ -142,6 +179,8 @@ Endpoints principales consumidos:
 | GET    | `/persons/:id`                  | Detalle de N.N.                          |
 | GET    | `/persons/:id/similarities`     | Cruces con reportes ciudadanos           |
 | POST   | `/persons`                      | Alta de N.N.                             |
+| POST   | `/persons/:id/audio`            | Subida de nota de voz (binario)          |
+| GET    | `/persons/:id/audio`            | Descarga de nota de voz (bytes crudos)   |
 | GET    | `/reports`                      | Reportes ciudadanos                      |
 | GET    | `/analytics/by-neighborhood`    | Actividad por barrio (KPIs + mapa)       |
 
